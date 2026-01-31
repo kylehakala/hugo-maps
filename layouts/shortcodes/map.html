@@ -35,10 +35,41 @@
     <div id='map-{{ $mapname }}'></div>
 
     <script>
+      // Suppress source map 404 errors
+      if (window.addEventListener) {
+        window.addEventListener('error', function(e) {
+          if (e.filename && e.filename.includes('.map')) {
+            e.preventDefault();
+          }
+        }, true);
+      }
+
+      // Helper function to validate LngLat coordinates
+      function validateLngLat(coords) {
+        if (!coords) return [-0.127758, 51.507351];
+        if (Array.isArray(coords) && coords.length === 2) {
+          const [lng, lat] = coords;
+          if (typeof lng === 'number' && typeof lat === 'number' && 
+              lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+            return coords;
+          }
+        }
+        if (typeof coords === 'object' && coords !== null) {
+          const lng = coords.lng || coords.lon;
+          const lat = coords.lat;
+          if (typeof lng === 'number' && typeof lat === 'number' &&
+              lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+            return [lng, lat];
+          }
+        }
+        console.warn('Invalid coordinates:', coords, '- using default');
+        return [-0.127758, 51.507351];
+      }
+
       window.addEventListener("load", function() {
         const map = new maplibregl.Map({
           container: 'map-{{ $mapname }}',
-          center: {{ $mapparams.center | jsonify }},
+          center: validateLngLat({{ $mapparams.center | jsonify }}),
           minZoom: {{ $mapparams.minZoom | default 0 }},
           maxZoom: {{ $mapparams.maxZoom | default 23 }},
           zoom: {{ $mapparams.zoom | default 11 }},
@@ -59,7 +90,7 @@
 
         {{- range $mapparams.markers }}
         new maplibregl.Marker()
-          .setLngLat({{ .location | jsonify }})
+          .setLngLat(validateLngLat({{ .location | jsonify }}))
           .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
           .addTo(map);
         {{- end }}
