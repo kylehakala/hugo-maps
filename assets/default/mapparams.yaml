@@ -17,3 +17,4 @@ attributionControl: true # whether to show attribution
 customAttribution: "" # custom attribution
 interactive: true # whether the map is interactive
 navigationControl: true # whether to show navigation controls
+glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf" # glyph URL
