@@ -44,32 +44,46 @@
         }, true);
       }
 
-      // Helper function to validate LngLat coordinates
+      // Helper function to validate and normalize LngLat coordinates
+      // Format must be [lng, lat] or {lng: ..., lat: ...} or {lon: ..., lat: ...}
+      // Returns validated coordinates or null if invalid (letting Map use its own defaults)
       function validateLngLat(coords) {
-        if (!coords) return [-0.127758, 51.507351];
+        if (!coords) return null;
+        
+        // Handle array format [lng, lat]
         if (Array.isArray(coords) && coords.length === 2) {
-          const [lng, lat] = coords;
-          if (typeof lng === 'number' && typeof lat === 'number' && 
-              lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
-            return coords;
+          const [first, second] = coords;
+          if (typeof first === 'number' && typeof second === 'number' && 
+              first >= -180 && first <= 180 && second >= -90 && second <= 90) {
+            return coords; // [lng, lat]
           }
         }
+        
+        // Handle object format {lng: ..., lat: ...} or {lon: ..., lat: ...}
         if (typeof coords === 'object' && coords !== null) {
-          const lng = coords.lng || coords.lon;
-          const lat = coords.lat;
+          // Try lng first, then lon
+          let lng = coords.lng;
+          let lat = coords.lat;
+          
+          if (!lng) {
+            lng = coords.lon;
+          }
+          
           if (typeof lng === 'number' && typeof lat === 'number' &&
               lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
             return [lng, lat];
           }
         }
-        console.warn('Invalid coordinates:', coords, '- using default');
-        return [-0.127758, 51.507351];
+        console.warn('Invalid coordinates format:', coords, '- expected [lng, lat] or {lng, lat}');
+        return null;
       }
 
       window.addEventListener("load", function() {
+        const center = validateLngLat({{ $mapparams.center | jsonify }}) || [-0.127758, 51.507351];
+        
         const map = new maplibregl.Map({
           container: 'map-{{ $mapname }}',
-          center: validateLngLat({{ $mapparams.center | jsonify }}),
+          center: center,
           minZoom: {{ $mapparams.minZoom | default 0 }},
           maxZoom: {{ $mapparams.maxZoom | default 23 }},
           zoom: {{ $mapparams.zoom | default 11 }},
