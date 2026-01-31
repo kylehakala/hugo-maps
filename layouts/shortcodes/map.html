@@ -50,6 +50,16 @@
       function validateLngLat(coords) {
         if (!coords) return null;
         
+        // Parse JSON string if needed
+        if (typeof coords === 'string') {
+          try {
+            coords = JSON.parse(coords);
+          } catch (e) {
+            console.warn('Failed to parse coordinates:', coords);
+            return null;
+          }
+        }
+        
         // Handle array format [lng, lat]
         if (Array.isArray(coords) && coords.length === 2) {
           const [first, second] = coords;

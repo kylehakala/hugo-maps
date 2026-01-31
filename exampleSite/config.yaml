@@ -1,60 +1,65 @@
-baseURL: 'https://marcpabst.github.io/hugo-maps/'
-languageCode: 'en-gb'
-title: 'Hugo Maps Demo'
+baseURL: 'https://kylehakala.github.io/hugo-maps/'
+languageCode: 'en-us'
+title: 'Hugo Maps Examples'
+defaultContentLanguage: 'en'
+
+outputs:
+  home:
+    - HTML
 
 params:
   hugo-maps:
-      default:
-        sources: 
-           openmaptiles:
-             type: vector
-             url: https://api.maptiler.com/tiles/v3/tiles.json?key=143k20pEdcyOeBepEEnR
-        height: 500px
-      map_3d:
-        style: maptiler-3d
-        center: [-0.127758, 51.507351]
-        wm-bounding-box: [0.499265, 0.3329205529428414, 0.5001916666666667, 0.33214313777934357]
-        tilesMinZoom: 0
-        tilesMaxZoom: 14
-        minZoom: 4
-        maxZoom: 20
-        zoom: 15
-        pitch: 30
-        antialias: true
-        markers:
-          - location: [-0.127972, 51.507722, ]
-            text: "Nelson's Column"
-      theme_map:
-        zoom: 15
-        interactive: false
-        center: [-0.127758, 51.507351]
-        navigationControl: false
-      os_theme_map:
-        zoom: 15
-        center: [-0.127758, 51.507351]
-        navigationControl: false
-        setFeatureState:
-          - feature:
-              id: 688993137
-              source: openmaptiles
-              sourceLayer: building
-            state: 
-              active: true
-        sources: 
-           composite:
-             type: vector
-             url: https://s3-eu-west-1.amazonaws.com/tiles.os.uk/v2/data/vector/open-zoomstack/config.json
-            
-      new_york_map:
-        center: [-74.005833, 40.712778]
-      map2:
-        type: remote
-        style: toner
+    default:
+      height: 500px
+      zoom: 12
+      minZoom: 0
+      maxZoom: 20
+      navigationControl: true
+      # Default OpenMapTiles source for vector maps
+      sources:
+        openmaptiles:
+          type: vector
+          url: https://api.maptiler.com/tiles/v3/tiles.json?key=eHeY6KzlE8jPxerEJib5
+
+    # Example 1: Simple map
+    simple_map:
+      style: osm-bright
+      center: [-74.006, 40.7128]  # New York City
+      zoom: 13
+
+    # Example 2: 3D map
+    map_3d:
+      style: maptiler-3d
+      center: [-0.1278, 51.5074]  # London
+      zoom: 15
+      pitch: 45
+      bearing: 0
+      antialias: true
+
+    # Example 3: Dark theme
+    dark_map:
+      style: darkmatter
+      center: [2.3522, 48.8566]  # Paris
+      zoom: 13
+
+    # Example 4: Map with marker
+    map_with_marker:
+      style: positron
+      center: [-118.2437, 34.0522]  # Los Angeles
+      zoom: 13
+      markers:
+        - location: [-118.2437, 34.0522]
+          text: "Los Angeles"
+
+    # Example 5: Interactive map
+    interactive_map:
+      style: fjord-color
+      center: [10.7522, 59.9139]  # Oslo
+      zoom: 12
+      pitch: 30
+      bearing: 45
+      navigationControl: true
 
 module:
-  replacements: "github.com/marcpabst/hugo-maps -> ../.."
   imports:
-   - # theme
-     path: "github.com/alex-shpak/hugo-book"
-   - # maps
-     path: "github.com/marcpabst/hugo-maps"
+    - path: "github.com/kylehakala/hugo-maps"

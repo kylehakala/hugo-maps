@@ -1,195 +1,180 @@
 ---
-title: "Hugo Maps"
-date: 2020-05-01T00:00:00+01:00
-draft: false
+title: Hugo Maps Examples
 ---
 
-# Beautiful Maps for Hugo
+# Hugo Maps Examples
 
-`hugo-maps` is a [Hugo](https://gohugo.io/) module that allows you to easily add beautiful maps to your Hugo site. It uses [MapLibre GL JS](https://docs.mapbox.com/mapbox-gl-js/api/) to render vector maps.
+Welcome to **hugo-maps**, a Hugo module that makes it easy to add beautiful, interactive maps to your website!
 
-You can either use a commercial map server (e.g., [Maptiler](https://www.maptiler.com/)) or a self-hosted map server (e.g., [Tileserver GL](https://github.com/maptiler/tileserver-gl)) to generate the vector map tiles.
+## What is hugo-maps?
 
-You can [**go to the examples**](#examples) or [**look at the included themes**](#themes). 
+hugo-maps is a modern Hugo module powered by [MapLibre GL](https://maplibre.org/) that allows you to embed interactive vector maps with minimal configuration.
 
-## Features
-- 🌍 High-quality interactive vector maps.
-- 🎨 Comes with lots of styles. You can also use your own custom style if you want.
-- 🅰️ Glyphs for all included styles are included in the module.
-- 📍 Support for custom markers.
-- 💾 Supports download of vector tiles at deploy time (no external API calls at runtime).
+### Key Features
 
-**{{< hint >}} Local maps are currently not supported, pending minor changes to Hugo's template engine. {{< /hint >}}**
+- 🗺️ Beautiful vector maps with multiple built-in styles
+- 🎨 Responsive design that works on all devices
+- 📍 Custom markers and annotations
+- 🎬 3D maps with pitch and bearing controls
+- ⚡ Fast, lightweight, and privacy-focused
+- 🔧 Works with Hugo 0.155+
 
+---
+
+## Map Examples
+
+### Example 1: Simple Map (NYC)
+
+{{< map name="simple_map" >}}
+
+A basic map using the OSM Bright theme, centered on New York City.
+
+---
+
+### Example 2: 3D Map (London)
+
+{{< map name="map_3d" >}}
+
+A 3D map with terrain visualization. Drag to pan, scroll to zoom, and hold Shift + drag to rotate!
+
+---
+
+### Example 3: Dark Theme (Paris)
+
+{{< map name="dark_map" >}}
+
+The same style, but with a dark theme for better visibility in low-light conditions.
+
+---
+
+### Example 4: Map with Marker (Los Angeles)
+
+{{< map name="map_with_marker" >}}
+
+Demonstrates custom markers with popup annotations.
+
+---
+
+### Example 5: Interactive Map (Oslo)
+
+{{< map name="interactive_map" >}}
+
+A fully interactive map with all controls enabled.
+
+---
 
 ## Getting Started
 
-### 1. Add the module to your site
+### 1. Add to Your Hugo Project
 
-Add the following to your site's `config` file:
+Add hugo-maps as a module in your `config.yaml`:
 
 ```yaml
 module:
   imports:
-    - path: github.com/marcpabst/hugo-maps
+    - path: "github.com/kylehakala/hugo-maps"
 ```
 
-### 2. Add a tile source
+### 2. Configure Your Maps
 
-You need to add a tile source to your site's `config` file. You can either use a commercial tile server (e.g., [Maptiler](https://www.maptiler.com/)) or a self-hosted tile server. If you want to use Maptiler, you need to [register for an account](https://www.maptiler.com/cloud/) and get an API key.
-
-Add the URL of the tile server to your site's `config` file (you can also do this on a per-map basis):
-
-```yaml
-params:
-  hugo-maps:
-      default:
-        tileJSON: https://api.maptiler.com/tiles/v3/tiles.json?key={key}
-```
-
-### 3. Define a map and add it to your site
-
-You can define a map in your site's `config` file. The following example defines a map named `my_map`:
+Define map configurations in your site config:
 
 ```yaml
 params:
   hugo-maps:
     default:
-        tileJSON: https://api.maptiler.com/tiles/v3/tiles.json?key={key}
-    my_map:
-        center: [0, 0]
-        zoom: 2
-```
-
-You can add a map to your site by using the `map` shortcode and the `name` argument:
-
-````html
-{{</* map name="my_map" */>}}
-````
-
-Optionally, you can override the default configuration for the map by passing additional arguments to the shortcode. For example, you can change the height of the map by passing a `height` argument.
-
-````html
-{{</* map name="my_map" height="350px" */>}}
-````
-
-
-## Configuration
-
-Maps are configured using the `hugo-maps` parameter in your site's `config` file. A map is defined by a unique name and a configuration. The `default` configuration is used for all maps unless you override it for a specific map.
+      height: 500px
+      navigationControl: true
     
-```yaml
-params:
-    hugo-maps:
-        default:
-            ... default configuration ...
-        my_map:
-            ... configuration for "my_map" ...
+    my_map:
+      style: osm-bright
+      center: [-74.006, 40.7128]
+      zoom: 13
 ```
 
-Here are the available configuration options with their default values:
+### 3. Embed in Content
 
-```yaml
-{{% showbase %}}
+Use the map shortcode in your Markdown:
+
+```markdown
+{{< map name="my_map" >}}
 ```
 
-## Examples
+---
 
-All examples use the following `default` configuration. You can override this configuration for each map. Please note that to use Maptiler's tile sever, you need to [register for an account](https://www.maptiler.com/cloud/) and get an API key.
+## Available Map Styles
+
+hugo-maps includes several beautiful built-in map styles:
+
+| Style | Description |
+|-------|-------------|
+| **osm-bright** | Classic, clean OpenStreetMap style |
+| **positron** | Light, minimal style perfect for dashboards |
+| **darkmatter** | Dark theme for night mode viewing |
+| **toner** | High-contrast black and white style |
+| **fjord-color** | Nordic-inspired colorful style |
+| **maptiler-3d** | 3D terrain and building visualization |
+
+---
+
+## Configuration Options
+
+Maps support extensive customization:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `style` | string | osm-bright | Map theme/style |
+| `center` | array | [0, 0] | [longitude, latitude] coordinates |
+| `zoom` | number | 12 | Initial zoom level (0-20) |
+| `minZoom` | number | 0 | Minimum zoom level |
+| `maxZoom` | number | 20 | Maximum zoom level |
+| `pitch` | number | 0 | Camera pitch in degrees (0-60) |
+| `bearing` | number | 0 | Camera bearing in degrees (0-359) |
+| `antialias` | bool | false | Enable antialiasing for smoother edges |
+| `navigationControl` | bool | true | Show zoom/rotation controls |
+| `interactive` | bool | true | Allow user interaction |
+| `attributionControl` | bool | true | Show attribution |
+| `height` | string | 300px | Map container height |
+| `width` | string | 100% | Map container width |
+| `markers` | array | [] | Array of marker objects |
+
+### Marker Configuration
+
+Add markers with popup text:
 
 ```yaml
-params:
-  hugo-maps:
-      default:
-        tiles: https://api.maptiler.com/tiles/v3/{z}/{x}/{y}.pbf?key={key}
-
+markers:
+  - location: [-74.006, 40.7128]
+    text: "New York City"
+  - location: [-118.243, 34.052]
+    text: "Los Angeles"
 ```
 
-### Example 1: Custom map center
+---
 
-```yaml
-params:
-  hugo-maps:
-    new_york_map:
-        center: [-74.005833, 40.712778]
-```
+## Browser Support
 
-{{< map name="new_york_map" >}}
+hugo-maps works on all modern browsers:
 
-### Example 2: Styling the map
-```yaml
-params:
-  hugo-maps:
-    my_london_map:
-        style: toner
-        center: [-0.127758, 51.507351]
-```
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
 
-{{< map name="map2" >}}
+---
 
-### Example 3: 3D map with marker
+## Learn More
 
-```yaml
-params:
-  hugo-maps:
-    my_london_map:
-        type: local
-        style: maptiler-3d
-        center: [-0.127758, 51.507351]
-        tilesBoundingBox: [0.49956765, 0.3325506204915718, 0.4997617583333333, 0.3323975306107756]
-        tilesMinZoom: 0
-        tilesMaxZoom: 15
-        minZoom: 4
-        maxZoom: 24
-        zoom: 14
-        pitch: 45
-        antialias: true
-        markers:
-          - location: [-0.127758, 51.507351]
-            text: 'Welcome to London'
-```
+For more information, documentation, and advanced usage:
 
-{{< map name="map_3d" >}}
+- **GitHub**: [kylehakala/hugo-maps](https://github.com/kylehakala/hugo-maps)
+- **MapLibre GL**: [maplibre.org](https://maplibre.org/)
+- **Hugo**: [gohugo.io](https://gohugo.io/)
 
-
-## Openmaptiles Styles
-
-### OSM-Bright (`osm-bright`)
-
-{{< map name="theme_map" style="osm-bright" height="200px" >}}
-
-### MapTiler Basic (`maptiler-basic`)
-
-{{< map name="theme_map" style="maptiler-basic" height="200px" >}}
-
-### MapTiler 3D (`maptiler-3d`)
-
-{{< map name="theme_map" style="maptiler-3d" height="200px" >}}
-
-### Toner (`toner`)
-
-{{< map name="theme_map" style="toner" height="200px" >}}
-
-### Positron (`positron`)
-
-{{< map name="theme_map" style="positron" height="200px" >}}
-
-### Fjord Color (`fjord-color`)
-
-{{< map name="theme_map" style="fjord-color" height="200px" >}}
-
-### Darkmatter (`darkmatter`)
-
-{{< map name="theme_map" style="darkmatter" height="200px" >}}
-
-## Custom Styles
-
-Ordnance Survey's OS Open Zoomstack covers the whole of Great Britain. It is not compatible with the OpenMapTiles styles. However, you can create a custom style using the [Maputnik editor](https://maputnik.github.io/editor/). You can even combine the OS Open Zoomstack with the OpenMapTiles sources.
-
-### CVL 3D (`cvl-3d`)
-
-{{< map name="os_theme_map" style="cvl-3d" height="200px" >}}
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. OpenMapTiles styles are licensed under the BSD 3-Clause License. Please make sure that you comply with the license of the map tiles you use.
+hugo-maps is open source and available under the Apache 2.0 License.
+
+Happy mapping! 🗺️
