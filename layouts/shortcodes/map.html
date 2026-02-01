@@ -105,7 +105,7 @@
           attributionControl: {{ $mapparams.attributionControl | default true }},
           customAttribution: "{{ $mapparams.customAttribution | default "" }}",
           interactive: {{ $mapparams.interactive | default true }},
-          markerColor: {{ $mapparams.markerColor | default "#013467" }}
+          markerColor: {{ $mapparams.markerColor | default "#013467" }},
           style: {{ $mapstyle | jsonify | safeJS }}
         });
 
