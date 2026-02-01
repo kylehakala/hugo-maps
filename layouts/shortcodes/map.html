@@ -22,8 +22,8 @@
       {{- $mapstyle = merge $mapstyle $sources $glyphs -}}
     {{- end -}}
 
-    <script src='{{ (resources.Get "js/maplibre-gl.js").RelPermalink }}'></script>
-    <link href='{{ (resources.Get "css/maplibre-gl.css").RelPermalink }}' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/maplibre-gl@5.17.0/dist/maplibre-gl.js'></script>
+    <link href='https://cdn.jsdelivr.net/npm/maplibre-gl@5.17.0/dist/maplibre-gl.css' rel='stylesheet' />
 
     <style>
       #map-{{ $mapname }} {
