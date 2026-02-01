@@ -113,7 +113,7 @@
         {{- end }}
 
         {{- range $mapparams.markers }}
-        new maplibregl.Marker("{{ .markerOptions }}")
+        new maplibregl.Marker({color: "{{ .color }}"})
           .setLngLat(validateLngLat({{ .location | jsonify }}))
           .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
           .addTo(map);
