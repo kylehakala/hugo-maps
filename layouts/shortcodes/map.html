@@ -2,7 +2,7 @@
 <p>Error: No map name specified. Please specify a map name in the shortcode. Example: \{\{&lt; map name="mapname" &gt;\}\}</p>
 {{- else -}}
   {{- $mapConfigName := .Get "name" -}}
-  {{- $mapAddress := .Get "address" -}}
+  {{- $mapAddress := .Get "address" | default .Page.Params.address -}}
   {{- $hugoMapsConfig := index site.Params "hugo-maps" -}}
   {{- $mapparams := index $hugoMapsConfig $mapConfigName -}}
 
