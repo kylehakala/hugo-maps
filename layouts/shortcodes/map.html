@@ -126,11 +126,26 @@
                   const baseUrl = (config && config.nominatim && config.nominatim.url) || 'https://nominatim.openstreetmap.org';
                   const searchQuery = encodeURIComponent(query);
                   const request = `${baseUrl}/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
+                  
+                  console.log('Nominatim request:', request);
+                  
                   const response = await fetch(request);
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+                  
                   const geojson = await response.json();
+                  if (!geojson.features) {
+                    console.warn('No features in Nominatim response:', geojson);
+                    return [];
+                  }
                   
                   const features = [];
                   for (const feature of geojson.features) {
+                    if (!feature.bbox) {
+                      console.warn('Feature missing bbox:', feature);
+                      continue;
+                    }
                     const center = [
                       feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
                       feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
@@ -145,6 +160,8 @@
                       center
                     });
                   }
+                  
+                  console.log('Nominatim returned ' + features.length + ' features');
                   return features;
                 }
               }
