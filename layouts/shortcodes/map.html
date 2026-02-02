@@ -149,11 +149,15 @@
                     bearing: {{ $mapparams.bearing | default 0 }},
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
-                  
-                  new maplibregl.Popup()
+                  // Create a marker at the geocoded location with a popup
+                  new maplibregl.Marker()
                     .setLngLat(feature.center)
-                    .setHTML("<strong>{{ .Page.Title }}</strong>")
-                    .addTo(map);
+                    .setPopup(
+                      new maplibregl.Popup()
+                        .setHTML("<strong>{{ .Page.Title }}</strong>")
+                    )
+                    .addTo(map)
+                    .togglePopup();
                 }
               })
               .catch((err) => {
