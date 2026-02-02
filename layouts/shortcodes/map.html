@@ -13,6 +13,7 @@
     {{- $baseparams := (resources.Get "default/mapparams.yaml") | unmarshal -}}
     {{- $defaultparams := index $hugoMapsConfig "default" | default dict -}}
     {{- $mapparams = merge $baseparams $defaultparams $mapparams -}}
+    {{- $addressZoom := .Get "address-zoom" | default .Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
 
     {{- $mapstyle := dict -}}
 
@@ -142,9 +143,14 @@
               .then((result) => {
                 if (result.features && result.features.length > 0) {
                   const feature = result.features[0];
+                  {{- if $addressZoom }}
+                  const addressZoom = {{ $addressZoom }};
+                  {{- else }}
+                  const addressZoom = {{ $mapparams.zoom | default 11 }};
+                  {{- end }}
                   map.flyTo({
                     center: feature.center,
-                    zoom: {{ $mapparams.zoom | default 11 }},
+                    zoom: addressZoom,
                     duration: 2500,
                     bearing: {{ $mapparams.bearing | default 0 }},
                     pitch: {{ $mapparams.pitch | default 0 }}
