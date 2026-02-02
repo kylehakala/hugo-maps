@@ -2,6 +2,7 @@
 <p>Error: No map name specified. Please specify a map name in the shortcode. Example: \{\{&lt; map name="mapname" &gt;\}\}</p>
 {{- else -}}
   {{- $mapConfigName := .Get "name" -}}
+  {{- $mapAddress := .Get "address" -}}
   {{- $hugoMapsConfig := index site.Params "hugo-maps" -}}
   {{- $mapparams := index $hugoMapsConfig $mapConfigName -}}
 
@@ -28,16 +29,35 @@
     <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.min.js"></script>
     <link
         rel="stylesheet"
-        href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.css"
-    />
+        href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.css" />
+        
+
+    <style>
+      #map-{{ $mapname }} {
+        width: {{ .Get "width" | default $mapparams.width }};
+        height: {{ .Get "height" | default $mapparams.height }};
+      }
+    </style>
+
+    <div id='map-{{ $mapname }}'></div>
+
     <script>
-        const geocoderApi = {
+      // Suppress source map 404 errors
+      if (window.addEventListener) {
+        window.addEventListener('error', function(e) {
+          if (e.filename && e.filename.includes('.map')) {
+            e.preventDefault();
+          }
+        }, true);
+      }
+
+      const geocoderApi = {
             forwardGeocode: async (config) => {
                 const features = [];
                 try {
                     const request =
                 `https://nominatim.openstreetmap.org/search?q=${
-                    {{ .address }}
+                    {{ $mapAddress }}
                 }&format=geojson&polygon_geojson=1&addressdetails=1`;
                     const response = await fetch(request);
                     const geojson = await response.json();
@@ -76,26 +96,6 @@
                 maplibregl
             })
         );
-    </script>
-
-    <style>
-      #map-{{ $mapname }} {
-        width: {{ .Get "width" | default $mapparams.width }};
-        height: {{ .Get "height" | default $mapparams.height }};
-      }
-    </style>
-
-    <div id='map-{{ $mapname }}'></div>
-
-    <script>
-      // Suppress source map 404 errors
-      if (window.addEventListener) {
-        window.addEventListener('error', function(e) {
-          if (e.filename && e.filename.includes('.map')) {
-            e.preventDefault();
-          }
-        }, true);
-      }
 
       // Helper function to validate and normalize LngLat coordinates
       // Format must be [lng, lat] or {lng: ..., lat: ...} or {lon: ..., lat: ...}
