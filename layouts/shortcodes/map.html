@@ -18,19 +18,12 @@
 
     {{- if eq ($mapparams.type | default "remote") "remote" -}}
       {{- $sources := dict "sources" ($mapparams.sources | default dict) -}}
-      {{- $glyphs := dict "glyphs" ($mapparams.glyphs | default "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf") -}}
       {{- $mapstyle = resources.Get (printf "map-styles/%s.json" ($mapparams.style | default "osm-bright")) | unmarshal -}}
-      {{- $mapstyle = merge $mapstyle $sources $glyphs -}}
+      {{- $mapstyle = merge $mapstyle $sources -}}
     {{- end -}}
 
     <script src='https://cdn.jsdelivr.net/npm/maplibre-gl@5.17.0/dist/maplibre-gl.js'></script>
     <link href='https://cdn.jsdelivr.net/npm/maplibre-gl@5.17.0/dist/maplibre-gl.css' rel='stylesheet' />
-
-    <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.min.js"></script>
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.css" />
-        
 
     <style>
       #map-{{ $mapname }} {
@@ -42,151 +35,153 @@
     <div id='map-{{ $mapname }}'></div>
 
     <script>
-      // Suppress source map 404 errors
-      if (window.addEventListener) {
-        window.addEventListener('error', function(e) {
-          if (e.filename && e.filename.includes('.map')) {
-            e.preventDefault();
-          }
-        }, true);
-      }
-
-      const geocoderApi = {
-        forwardGeocode: async (config) => {
-          const features = [];
-          try {
-            const searchQuery = encodeURIComponent(config.query);
-            const request = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
-            const response = await fetch(request);
-            const geojson = await response.json();
-            
-            for (const feature of geojson.features) {
-              const center = [
-                feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
-                feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
-              ];
-              const point = {
-                type: 'Feature',
-                geometry: {
-                  type: 'Point',
-                  coordinates: center
-                },
-                place_name: feature.properties.display_name,
-                properties: feature.properties,
-                text: feature.properties.display_name,
-                place_type: ['place'],
-                center
-              };
-              features.push(point);
+      // Setup global helpers if needed
+      if (!window.hugoMapsHelpers) {
+        window.hugoMapsHelpers = {
+          validateLngLat: function(coords) {
+            if (!coords) return null;
+            if (typeof coords === 'string') {
+              try {
+                coords = JSON.parse(coords);
+              } catch (e) {
+                return null;
+              }
             }
-          } catch (e) {
-            console.error(`Failed to forwardGeocode with error: ${e}`);
-          }
-          return { features };
-        }
-      };
-
-      // Helper function to validate and normalize LngLat coordinates
-      // Format must be [lng, lat] or {lng: ..., lat: ...} or {lon: ..., lat: ...}
-      // Returns validated coordinates or null if invalid (letting Map use its own defaults)
-      function validateLngLat(coords) {
-        if (!coords) return null;
-        
-        // Parse JSON string if needed
-        if (typeof coords === 'string') {
-          try {
-            coords = JSON.parse(coords);
-          } catch (e) {
-            console.warn('Failed to parse coordinates:', coords);
+            if (Array.isArray(coords) && coords.length === 2) {
+              const [first, second] = coords;
+              if (typeof first === 'number' && typeof second === 'number' && 
+                  first >= -180 && first <= 180 && second >= -90 && second <= 90) {
+                return coords;
+              }
+            }
+            if (typeof coords === 'object' && coords !== null) {
+              let lng = coords.lng || coords.lon;
+              let lat = coords.lat;
+              if (typeof lng === 'number' && typeof lat === 'number' &&
+                  lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+                return [lng, lat];
+              }
+            }
             return null;
+          },
+
+          geocoderApi: {
+            forwardGeocode: async function(config) {
+              const features = [];
+              try {
+                const searchQuery = encodeURIComponent(config.query);
+                const request = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
+                const response = await fetch(request);
+                const geojson = await response.json();
+                
+                for (const feature of geojson.features) {
+                  const center = [
+                    feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+                    feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
+                  ];
+                  features.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: center },
+                    place_name: feature.properties.display_name,
+                    properties: feature.properties,
+                    text: feature.properties.display_name,
+                    place_type: ['place'],
+                    center
+                  });
+                }
+              } catch (e) {
+                console.error('Geocoder error:', e);
+              }
+              return { features };
+            }
           }
-        }
-        
-        // Handle array format [lng, lat]
-        if (Array.isArray(coords) && coords.length === 2) {
-          const [first, second] = coords;
-          if (typeof first === 'number' && typeof second === 'number' && 
-              first >= -180 && first <= 180 && second >= -90 && second <= 90) {
-            return coords; // [lng, lat]
-          }
-        }
-        
-        // Handle object format {lng: ..., lat: ...} or {lon: ..., lat: ...}
-        if (typeof coords === 'object' && coords !== null) {
-          // Try lng first, then lon
-          let lng = coords.lng;
-          let lat = coords.lat;
-          
-          if (!lng) {
-            lng = coords.lon;
-          }
-          
-          if (typeof lng === 'number' && typeof lat === 'number' &&
-              lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
-            return [lng, lat];
-          }
-        }
-        console.warn('Invalid coordinates format:', coords, '- expected [lng, lat] or {lng, lat}');
-        return null;
+        };
       }
 
-      window.addEventListener("load", function() {
-        const center = validateLngLat({{ $mapparams.center | jsonify }}) || [-0.127758, 51.507351];
-        
-        const map = new maplibregl.Map({
-          container: 'map-{{ $mapname }}',
-          center: center,
-          minZoom: {{ $mapparams.minZoom | default 0 }},
-          maxZoom: {{ $mapparams.maxZoom | default 23 }},
-          zoom: {{ $mapparams.zoom | default 11 }},
-          bearing: {{ $mapparams.bearing | default 0 }},
-          minPitch: {{ $mapparams.minPitch | default 0 }},
-          maxPitch: {{ $mapparams.maxPitch | default 60 }},
-          pitch: {{ $mapparams.pitch | default 0 }},
-          antialias: {{ $mapparams.antialias | default false }},
-          attributionControl: {{ $mapparams.attributionControl | default true }},
-          customAttribution: "{{ $mapparams.customAttribution | default "" }}",
-          interactive: {{ $mapparams.interactive | default true }},
-          markerColor: {{ $mapparams.markerColor | default "#013467" }},
-          style: {{ $mapstyle | jsonify | safeJS }}
-        });
-
-        {{- if $mapparams.navigationControl }}
-        map.addControl(new maplibregl.NavigationControl());
-        {{- end }}
-
-        {{- if $mapAddress }}
-        const geocoder = new MaplibreGeocoder.MaplibreGeocoder(geocoderApi);
-        map.addControl(geocoder, 'top-left');
-        
-        // Auto-search the provided address
-        geocoderApi.forwardGeocode({query: '{{ $mapAddress }}'}).then((result) => {
-          if (result.features.length > 0) {
-            const feature = result.features[0];
-            map.flyTo({
-              center: feature.center,
-              zoom: 12,
-              duration: 1500
-            });
+      // Immediately initialize this map (IIFE)
+      (function() {
+        function tryInit() {
+          if (typeof maplibregl === 'undefined') {
+            setTimeout(tryInit, 50);
+            return;
           }
-        }).catch((err) => {
-          console.warn('Geocoding lookup failed for address:', '{{ $mapAddress }}', err);
-        });
-        {{- end }}
 
-        {{- range $mapparams.markers }}
-        new maplibregl.Marker({color: "{{ default $mapparams.markerColor .color }}"})
-          .setLngLat(validateLngLat({{ .location | jsonify }}))
-          .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
-          .addTo(map);
-        {{- end }}
+          const mapId = 'map-{{ $mapname }}';
+          const container = document.getElementById(mapId);
+          if (!container) {
+            console.error('Map container not found:', mapId);
+            return;
+          }
 
-        {{- range $mapparams.setfeaturestate }}
-        map.on('data', function(e) {
-          map.setFeatureState({{ .feature | jsonify }}, {{ .state | jsonify }});
-        });
-        {{- end }}
-      });
+          const center = window.hugoMapsHelpers.validateLngLat({{ $mapparams.center | jsonify }}) || [-0.127758, 51.507351];
+          
+          const map = new maplibregl.Map({
+            container: mapId,
+            center: center,
+            minZoom: {{ $mapparams.minZoom | default 0 }},
+            maxZoom: {{ $mapparams.maxZoom | default 23 }},
+            zoom: {{ $mapparams.zoom | default 11 }},
+            bearing: {{ $mapparams.bearing | default 0 }},
+            minPitch: {{ $mapparams.minPitch | default 0 }},
+            maxPitch: {{ $mapparams.maxPitch | default 60 }},
+            pitch: {{ $mapparams.pitch | default 0 }},
+            antialias: {{ $mapparams.antialias | default false }},
+            attributionControl: {{ $mapparams.attributionControl | default true }},
+            customAttribution: "{{ $mapparams.customAttribution | default "" }}",
+            interactive: {{ $mapparams.interactive | default true }},
+            style: {{ $mapstyle | jsonify | safeJS }}
+          });
+
+          {{- if $mapparams.navigationControl }}
+          map.addControl(new maplibregl.NavigationControl());
+          {{- end }}
+
+          {{- if $mapAddress }}
+          const handleGeocode = function() {
+            window.hugoMapsHelpers.geocoderApi.forwardGeocode({query: '{{ $mapAddress }}'})
+              .then((result) => {
+                if (result.features && result.features.length > 0) {
+                  const feature = result.features[0];
+                  map.flyTo({
+                    center: feature.center,
+                    zoom: 12,
+                    duration: 1500
+                  });
+                }
+              })
+              .catch((err) => {
+                console.error('Geocode error:', err);
+              });
+          };
+          
+          if (map.isStyleLoaded()) {
+            handleGeocode();
+          } else {
+            map.on('load', handleGeocode);
+          }
+          {{- end }}
+
+          {{- range $mapparams.markers }}
+          new maplibregl.Marker()
+            .setLngLat(window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }}))
+            .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
+            .addTo(map);
+          {{- end }}
+
+          {{- range $mapparams.setfeaturestate }}
+          map.on('data', function(e) {
+            map.setFeatureState({{ .feature | jsonify }}, {{ .state | jsonify }});
+          });
+          {{- end }}
+        }
+
+        // Trigger on DOM ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', tryInit);
+        } else {
+          tryInit();
+        }
+      })();
     </script>
   {{- end -}}
 {{- end -}}
