@@ -119,37 +119,71 @@
           },
 
           geocoderApi: {
+            // Default configuration - can be overridden per-provider
+            defaults: {
+              userAgent: 'hugo-maps/1.0',
+              timeout: 10000
+            },
+            
             providers: {
               nominatim: {
                 name: 'OpenStreetMap Nominatim',
-                forwardGeocode: async function(query, config) {
-                  const baseUrl = (config && config.nominatim && config.nominatim.url) || 'https://nominatim.openstreetmap.org';
+                forwardGeocode: async function(query, config, defaults) {
+                  const providerConfig = (config && config.nominatim) || {};
+                  const baseUrl = providerConfig.url || 'https://nominatim.openstreetmap.org';
+                  const userAgent = providerConfig.userAgent || defaults.userAgent;
                   const searchQuery = encodeURIComponent(query);
                   const request = `${baseUrl}/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
                   
                   console.log('Nominatim request:', request);
                   
-                  const response = await fetch(request);
+                  const response = await fetch(request, {
+                    headers: {
+                      'User-Agent': userAgent,
+                      'Accept': 'application/json'
+                    }
+                  });
+                  
                   if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                   }
                   
                   const geojson = await response.json();
-                  if (!geojson.features) {
-                    console.warn('No features in Nominatim response:', geojson);
+                  if (!geojson.features || geojson.features.length === 0) {
+                    console.warn('No features in Nominatim response');
                     return [];
                   }
                   
                   const features = [];
                   for (const feature of geojson.features) {
-                    if (!feature.bbox) {
-                      console.warn('Feature missing bbox:', feature);
+                    // Use centroid from geometry or calculate from bbox
+                    let center;
+                    if (feature.geometry && feature.geometry.type === 'Point') {
+                      center = feature.geometry.coordinates;
+                    } else if (feature.bbox && feature.bbox.length >= 4) {
+                      center = [
+                        feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+                        feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
+                      ];
+                    } else if (feature.geometry && feature.geometry.coordinates) {
+                      // Try to get first coordinate for polygons
+                      const coords = feature.geometry.coordinates;
+                      if (Array.isArray(coords) && coords.length > 0) {
+                        if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                          center = coords[0][0]; // Polygon
+                        } else if (Array.isArray(coords[0])) {
+                          center = coords[0]; // LineString
+                        } else {
+                          center = coords; // Point
+                        }
+                      }
+                    }
+                    
+                    if (!center) {
+                      console.warn('Could not determine center for feature:', feature);
                       continue;
                     }
-                    const center = [
-                      feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
-                      feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
-                    ];
+                    
                     features.push({
                       type: 'Feature',
                       geometry: { type: 'Point', coordinates: center },
@@ -164,17 +198,63 @@
                   console.log('Nominatim returned ' + features.length + ' features');
                   return features;
                 }
+              },
+              
+              // Photon is a free alternative geocoder
+              photon: {
+                name: 'Photon (Komoot)',
+                forwardGeocode: async function(query, config, defaults) {
+                  const providerConfig = (config && config.photon) || {};
+                  const baseUrl = providerConfig.url || 'https://photon.komoot.io';
+                  const searchQuery = encodeURIComponent(query);
+                  const request = `${baseUrl}/api/?q=${searchQuery}&limit=5`;
+                  
+                  console.log('Photon request:', request);
+                  
+                  const response = await fetch(request, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+                  
+                  const geojson = await response.json();
+                  if (!geojson.features || geojson.features.length === 0) {
+                    console.warn('No features in Photon response');
+                    return [];
+                  }
+                  
+                  const features = geojson.features.map(feature => {
+                    const props = feature.properties || {};
+                    const placeParts = [props.name, props.city, props.state, props.country].filter(Boolean);
+                    const placeName = placeParts.join(', ');
+                    return {
+                      type: 'Feature',
+                      geometry: feature.geometry,
+                      place_name: placeName,
+                      properties: props,
+                      text: props.name || placeName,
+                      place_type: [props.osm_value || 'place'],
+                      center: feature.geometry.coordinates
+                    };
+                  });
+                  
+                  console.log('Photon returned ' + features.length + ' features');
+                  return features;
+                }
               }
             },
             
             forwardGeocode: async function(config) {
-              const providers = Array.isArray(config.providers) ? config.providers : [config.providers || 'nominatim'];
+              const providerList = config.providers 
+                ? (Array.isArray(config.providers) ? config.providers : config.providers.split(',').map(s => s.trim()))
+                : ['photon', 'nominatim'];
               const geocoderConfig = config.config || {};
               
-              console.log('forwardGeocode called with providers:', providers);
-              console.log('forwardGeocode config:', geocoderConfig);
+              console.log('forwardGeocode called with providers:', providerList);
               
-              for (const providerName of providers) {
+              for (const providerName of providerList) {
                 try {
                   const provider = this.providers[providerName];
                   if (!provider) {
@@ -183,15 +263,14 @@
                   }
                   
                   console.log(`Trying provider: ${providerName}`);
-                  const results = await provider.forwardGeocode(config.query, geocoderConfig);
-                  console.log(`Provider ${providerName} returned:`, results);
+                  const results = await provider.forwardGeocode(config.query, geocoderConfig, this.defaults);
                   
                   if (results && results.length > 0) {
                     console.log('Geocoding succeeded with ' + providerName);
                     return { features: results };
                   }
                 } catch (e) {
-                  console.error(`Geocoder '${providerName}' failed with error:`, e);
+                  console.error(`Geocoder '${providerName}' failed:`, e.message);
                   continue;
                 }
               }
