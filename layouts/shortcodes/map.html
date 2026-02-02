@@ -222,10 +222,16 @@
 
           {{- if $mapAddress }}
           const handleGeocode = function() {
+            {{- $geocodersValue := $mapparams.geocoders | default "nominatim" -}}
+            {{- if reflect.IsSlice $geocodersValue -}}
+            const geocoders = {{ $geocodersValue | jsonify }};
+            {{- else -}}
+            const geocoders = "{{ $geocodersValue }}";
+            {{- end }}
             window.hugoMapsHelpers.geocoderApi.forwardGeocode({
               query: '{{ $mapAddress }}',
-              providers: {{ $mapparams.geocoders | default "nominatim" | jsonify }},
-              config: {{ $mapparams.geocoderConfig | default dict | jsonify }}
+              providers: geocoders,
+              config: {{ $mapparams.geocoderConfig | default dict | jsonify | safeJS }}
             })
               .then((result) => {
                 if (result.features && result.features.length > 0) {
