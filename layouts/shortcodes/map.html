@@ -19,12 +19,12 @@
     {{- $mapAddress := "" -}}
     {{- if reflect.IsMap $geocodeParams -}}
       {{- /* If it's a map/dict, use it as-is (shouldn't happen but just in case) */ -}}
-      {{- $mapAddress = index .Page.Params "address" -}}
+      {{- $mapAddress = index $.Page.Params "address" -}}
     {{- else if reflect.IsSlice $geocodeParams -}}
       {{- /* It's an array of parameter names - combine them */ -}}
       {{- $parts := slice -}}
       {{- range $geocodeParams -}}
-        {{- $val := index .Page.Params . -}}
+        {{- $val := index $.Page.Params . -}}
         {{- if $val -}}
           {{- $parts = $parts | append (printf "%v" $val) -}}
         {{- end -}}
@@ -32,11 +32,11 @@
       {{- $mapAddress = delimit $parts ", " -}}
     {{- else -}}
       {{- /* It's a string parameter name */ -}}
-      {{- $mapAddress = index .Page.Params (printf "%v" $geocodeParams) -}}
+      {{- $mapAddress = index $.Page.Params (printf "%v" $geocodeParams) -}}
     {{- end -}}
     {{- /* Allow shortcode override */ -}}
     {{- $mapAddress = .Get "address" | default $mapAddress -}}
-    {{- $addressZoom := .Get "address-zoom" | default .Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
+    {{- $addressZoom := .Get "address-zoom" | default $.Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
 
     {{- $mapstyle := dict -}}
 
