@@ -1,5 +1,7 @@
 ---
 title: Hugo Maps Examples
+address: "Space Needle, Seattle"
+addressZoom: 13
 ---
 
 # Hugo Maps Examples
@@ -14,7 +16,7 @@ hugo-maps is a modern Hugo module powered by [MapLibre GL](https://maplibre.org/
 
 - 🗺️ Beautiful vector maps with multiple built-in styles
 - 🎨 Responsive design that works on all devices
-- 📍 Custom markers and annotations
+- 📍 Address geocoding with markers and popups
 - 🎬 3D maps with pitch and bearing controls
 - ⚡ Fast, lightweight, and privacy-focused
 - 🔧 Works with Hugo 0.155+
@@ -44,30 +46,6 @@ A 3D map with terrain visualization. Drag to pan, scroll to zoom, and hold Shift
 {{< map name="dark_map" >}}
 
 The same style, but with a dark theme for better visibility in low-light conditions.
-
----
-
-### Example 4: Map with Marker (Los Angeles)
-
-{{< map name="map_with_marker" >}}
-
-Demonstrates custom markers with popup annotations.
-
----
-
-### Example 5: Interactive Map (Oslo)
-
-{{< map name="interactive_map" >}}
-
-A fully interactive map with all controls enabled.
-
----
-
-### Example 6: Auto-Geocoding (Address Lookup)
-
-{{< map name="simple_map" address="Space Needle, Seattle" >}}
-
-This map demonstrates automatic address geocoding. Pass an `address` parameter to any map shortcode and it will automatically search for that location using OpenStreetMap's Nominatim service and fly to it!
 
 ---
 
@@ -127,53 +105,45 @@ hugo-maps includes several beautiful built-in map styles:
 
 ## Configuration Options
 
-Maps support extensive customization:
+Maps support extensive customization. See the full [README](https://github.com/kylehakala/hugo-maps) for all options.
+
+### Basic Map Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `style` | string | osm-bright | Map theme/style |
 | `center` | array | [0, 0] | [longitude, latitude] coordinates |
-| `zoom` | number | 12 | Initial zoom level (0-20) |
-| `minZoom` | number | 0 | Minimum zoom level |
-| `maxZoom` | number | 20 | Maximum zoom level |
+| `zoom` | number | 12 | Initial zoom level (0-23) |
 | `pitch` | number | 0 | Camera pitch in degrees (0-60) |
-| `bearing` | number | 0 | Camera bearing in degrees (0-359) |
-| `antialias` | bool | false | Enable antialiasing for smoother edges |
-| `navigationControl` | bool | true | Show zoom/rotation controls |
-| `interactive` | bool | true | Allow user interaction |
-| `attributionControl` | bool | true | Show attribution |
+| `bearing` | number | 0 | Camera bearing in degrees (0-360) |
 | `height` | string | 300px | Map container height |
-| `width` | string | 100% | Map container width |
-| `markers` | array | [] | Array of marker objects |
 
-### Marker Configuration
+### Geocoding Options
 
-Add markers with popup text:
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `geocodeParams` | string/array | "address" | Frontmatter field(s) to geocode |
+| `geocoders` | string | "photon,nominatim" | Geocoder provider(s) |
+| `flyToDuration` | number | 2500 | Fly-to animation duration (ms) |
+| `addressZoom` | number | zoom | Zoom level after geocoding |
+
+### Geocoding from Frontmatter
+
+Add an address to your page frontmatter:
 
 ```yaml
-markers:
-  - location: [-74.006, 40.7128]
-    text: "New York City"
-  - location: [-118.243, 34.052]
-    text: "Los Angeles"
+---
+title: "My Location"
+address: "Empire State Building, New York"
+addressZoom: 15
+---
 ```
 
----
-
-## Browser Support
-
-hugo-maps works on all modern browsers:
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
+The map will automatically geocode the address and display a marker with the page title.
 
 ---
 
 ## Learn More
-
-For more information, documentation, and advanced usage:
 
 - **GitHub**: [kylehakala/hugo-maps](https://github.com/kylehakala/hugo-maps)
 - **MapLibre GL**: [maplibre.org](https://maplibre.org/)
@@ -183,6 +153,6 @@ For more information, documentation, and advanced usage:
 
 ## License
 
-hugo-maps is open source and available under the Apache 2.0 License.
+hugo-maps is open source and available under the MIT License.
 
 Happy mapping! 🗺️

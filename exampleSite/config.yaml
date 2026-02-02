@@ -42,24 +42,6 @@ params:
       center: [2.3522, 48.8566]  # Paris
       zoom: 13
 
-    # Example 4: Map with marker
-    map_with_marker:
-      style: positron
-      center: [-118.2437, 34.0522]  # Los Angeles
-      zoom: 13
-      markers:
-        - location: [-118.2437, 34.0522]
-          text: "Los Angeles"
-
-    # Example 5: Interactive map
-    interactive_map:
-      style: fjord-color
-      center: [10.7522, 59.9139]  # Oslo
-      zoom: 12
-      pitch: 30
-      bearing: 45
-      navigationControl: true
-
 module:
   imports:
     - path: "github.com/kylehakala/hugo-maps"
