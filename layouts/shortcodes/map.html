@@ -142,11 +142,15 @@
               .then((result) => {
                 if (result.features && result.features.length > 0) {
                   const feature = result.features[0];
-                  map.flyTo({
+                  map.jumpTo({
                     center: feature.center,
-                    zoom: 12,
-                    duration: 1500
+                    zoom: 12
                   });
+                  
+                  new maplibregl.Popup()
+                    .setLngLat(feature.center)
+                    .setHTML("<strong>{{ .Page.Title }}</strong>")
+                    .addTo(map);
                 }
               })
               .catch((err) => {
