@@ -142,9 +142,12 @@
               .then((result) => {
                 if (result.features && result.features.length > 0) {
                   const feature = result.features[0];
-                  map.jumpTo({
+                  map.flyTo({
                     center: feature.center,
-                    zoom: 12
+                    zoom: {{ $mapparams.zoom | default 11 }},
+                    duration: 2500,
+                    bearing: {{ $mapparams.bearing | default 0 }},
+                    pitch: {{ $mapparams.pitch | default 0 }}
                   });
                   
                   new maplibregl.Popup()
