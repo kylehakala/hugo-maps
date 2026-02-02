@@ -22,12 +22,66 @@ flyToDuration: 2500 # animation duration in milliseconds when flying to geocoded
 geocodeParams: "address" # frontmatter parameter(s) to use for geocoding query (e.g., "address" or ["address", "title", "location"])
 geocoders: "photon,nominatim" # which geocoder(s) to use: "photon", "nominatim", or comma-separated for fallback
 geocoderConfig: # Provider-specific configuration (endpoints, API keys, etc.)
+  # Built-in providers (photon, nominatim) - just need optional config overrides
   photon:
     url: "https://photon.komoot.io" # Photon geocoder (free, no API key needed)
   nominatim:
     url: "https://nominatim.openstreetmap.org" # Public Nominatim instance
     userAgent: "hugo-maps/1.0" # Required User-Agent header for Nominatim
-  # maptiler:
-  #   apiKey: "your-maptiler-api-key"
-  # mapbox:
-  #   apiKey: "your-mapbox-api-key"
+  
+  # ============================================================================
+  # TEMPLATE GEOCODER EXAMPLES
+  # Any provider with a 'url' field will use the template geocoder system.
+  # Just add the provider name to the 'geocoders' list to use it.
+  # ============================================================================
+  
+  # geocode_maps_co:
+  #   url: "https://geocode.maps.co/search"
+  #   apiKey: "YOUR_API_KEY"  # Get free key at https://geocode.maps.co
+  #   params:
+  #     q: "{query}"
+  #     api_key: "{apiKey}"
+  #   # Response format: array of {lat, lon, display_name} - auto-detected
+  
+  # locationiq:
+  #   url: "https://us1.locationiq.com/v1/search"
+  #   apiKey: "YOUR_API_KEY"
+  #   params:
+  #     q: "{query}"
+  #     key: "{apiKey}"
+  #     format: "json"
+  #   # Response format: Nominatim-style array
+  
+  # opencage:
+  #   url: "https://api.opencagedata.com/geocode/v1/json"
+  #   apiKey: "YOUR_API_KEY"
+  #   params:
+  #     q: "{query}"
+  #     key: "{apiKey}"
+  #   resultsPath: "results"  # Results are in data.results array
+  #   latPath: "geometry.lat"  # Custom path to latitude
+  #   lonPath: "geometry.lng"  # Custom path to longitude
+  #   namePath: "formatted"    # Custom path to place name
+  
+  # geoapify:
+  #   url: "https://api.geoapify.com/v1/geocode/search"
+  #   apiKey: "YOUR_API_KEY"
+  #   params:
+  #     text: "{query}"
+  #     apiKey: "{apiKey}"
+  #     format: "json"
+  #   resultsPath: "results"
+  #   latPath: "lat"
+  #   lonPath: "lon"
+  #   namePath: "formatted"
+  
+  # positionstack:
+  #   url: "http://api.positionstack.com/v1/forward"
+  #   apiKey: "YOUR_API_KEY"
+  #   params:
+  #     query: "{query}"
+  #     access_key: "{apiKey}"
+  #   resultsPath: "data"
+  #   latPath: "latitude"
+  #   lonPath: "longitude"
+  #   namePath: "label"

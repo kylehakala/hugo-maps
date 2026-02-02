@@ -246,6 +246,157 @@
               }
             },
             
+            // Template-based geocoder for custom providers configured via YAML
+            templateGeocode: async function(providerName, query, providerConfig, defaults) {
+              const cfg = providerConfig || {};
+              
+              // Build URL with query parameters
+              let url = cfg.url || '';
+              const params = new URLSearchParams();
+              
+              // Process params - replace {query} and {apiKey} placeholders
+              if (cfg.params) {
+                for (const [key, value] of Object.entries(cfg.params)) {
+                  let paramValue = String(value);
+                  paramValue = paramValue.replace('{query}', query);
+                  paramValue = paramValue.replace('{apiKey}', cfg.apiKey || '');
+                  params.append(key, paramValue);
+                }
+              }
+              
+              // If URL contains {query} placeholder, replace it directly
+              if (url.includes('{query}')) {
+                url = url.replace('{query}', encodeURIComponent(query));
+              }
+              if (url.includes('{apiKey}')) {
+                url = url.replace('{apiKey}', cfg.apiKey || '');
+              }
+              
+              // Append params to URL
+              const paramString = params.toString();
+              if (paramString) {
+                url += (url.includes('?') ? '&' : '?') + paramString;
+              }
+              
+              console.log(`Template geocoder [${providerName}] request:`, url);
+              
+              // Build headers
+              const headers = { 'Accept': 'application/json' };
+              if (cfg.userAgent || defaults.userAgent) {
+                headers['User-Agent'] = cfg.userAgent || defaults.userAgent;
+              }
+              if (cfg.headers) {
+                Object.assign(headers, cfg.headers);
+              }
+              
+              const response = await fetch(url, { headers });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              
+              const data = await response.json();
+              
+              // Parse response based on format
+              const format = cfg.format || 'auto';
+              return this.parseGeocoderResponse(data, format, cfg);
+            },
+            
+            // Parse geocoder responses in various formats
+            parseGeocoderResponse: function(data, format, cfg) {
+              const features = [];
+              
+              // Get the array of results from the response
+              let results = data;
+              if (cfg.resultsPath) {
+                // Navigate to nested path like "results" or "data.items"
+                for (const key of cfg.resultsPath.split('.')) {
+                  results = results && results[key];
+                }
+              } else if (data.features) {
+                results = data.features; // GeoJSON format
+              } else if (Array.isArray(data)) {
+                results = data; // Direct array
+              }
+              
+              if (!results || !Array.isArray(results) || results.length === 0) {
+                console.warn('No results found in geocoder response');
+                return [];
+              }
+              
+              for (const item of results) {
+                let center = null;
+                let placeName = '';
+                
+                // Extract coordinates based on format
+                if (format === 'geojson' || (item.geometry && item.geometry.coordinates)) {
+                  // GeoJSON format
+                  center = item.geometry.coordinates;
+                  placeName = (item.properties && item.properties.display_name) || 
+                              (item.properties && item.properties.name) || '';
+                } else if (item.lat !== undefined && item.lon !== undefined) {
+                  // Nominatim-style (lat/lon as separate fields)
+                  center = [parseFloat(item.lon), parseFloat(item.lat)];
+                  placeName = item.display_name || item.name || '';
+                } else if (item.lat !== undefined && item.lng !== undefined) {
+                  // Google-style (lat/lng)
+                  center = [parseFloat(item.lng), parseFloat(item.lat)];
+                  placeName = item.formatted_address || item.display_name || item.name || '';
+                } else if (item.geometry && item.geometry.lat !== undefined) {
+                  // Google Places API style
+                  center = [parseFloat(item.geometry.lng || item.geometry.lon), parseFloat(item.geometry.lat)];
+                  placeName = item.formatted_address || item.name || '';
+                } else if (item.center && Array.isArray(item.center)) {
+                  // Already has center array
+                  center = item.center;
+                  placeName = item.place_name || item.text || '';
+                } else if (item.bbox && item.bbox.length >= 4) {
+                  // Calculate center from bounding box
+                  center = [
+                    (parseFloat(item.bbox[0]) + parseFloat(item.bbox[2])) / 2,
+                    (parseFloat(item.bbox[1]) + parseFloat(item.bbox[3])) / 2
+                  ];
+                  placeName = item.display_name || item.name || '';
+                } else if (cfg.latPath && cfg.lonPath) {
+                  // Custom paths for lat/lon
+                  const lat = this.getNestedValue(item, cfg.latPath);
+                  const lon = this.getNestedValue(item, cfg.lonPath);
+                  if (lat !== undefined && lon !== undefined) {
+                    center = [parseFloat(lon), parseFloat(lat)];
+                  }
+                  placeName = cfg.namePath ? this.getNestedValue(item, cfg.namePath) : '';
+                }
+                
+                if (!center) {
+                  console.warn('Could not extract coordinates from result:', item);
+                  continue;
+                }
+                
+                // Get place name from custom path if specified
+                if (cfg.namePath && !placeName) {
+                  placeName = this.getNestedValue(item, cfg.namePath) || '';
+                }
+                
+                features.push({
+                  type: 'Feature',
+                  geometry: { type: 'Point', coordinates: center },
+                  place_name: placeName,
+                  properties: item.properties || item,
+                  text: placeName,
+                  place_type: ['place'],
+                  center
+                });
+              }
+              
+              console.log(`Template geocoder parsed ${features.length} features`);
+              return features;
+            },
+            
+            // Helper to get nested object values like "geometry.location.lat"
+            getNestedValue: function(obj, path) {
+              return path.split('.').reduce((current, key) => current && current[key], obj);
+            },
+            
             forwardGeocode: async function(config) {
               const providerList = config.providers 
                 ? (Array.isArray(config.providers) ? config.providers : config.providers.split(',').map(s => s.trim()))
@@ -256,18 +407,32 @@
               
               for (const providerName of providerList) {
                 try {
+                  // Check for built-in provider first
                   const provider = this.providers[providerName];
-                  if (!provider) {
-                    console.warn(`Geocoder provider '${providerName}' not found`);
-                    continue;
-                  }
-                  
-                  console.log(`Trying provider: ${providerName}`);
-                  const results = await provider.forwardGeocode(config.query, geocoderConfig, this.defaults);
-                  
-                  if (results && results.length > 0) {
-                    console.log('Geocoding succeeded with ' + providerName);
-                    return { features: results };
+                  if (provider) {
+                    console.log(`Trying built-in provider: ${providerName}`);
+                    const results = await provider.forwardGeocode(config.query, geocoderConfig, this.defaults);
+                    
+                    if (results && results.length > 0) {
+                      console.log('Geocoding succeeded with ' + providerName);
+                      return { features: results };
+                    }
+                  } else if (geocoderConfig[providerName] && geocoderConfig[providerName].url) {
+                    // Use template geocoder for custom providers defined in config
+                    console.log(`Trying template provider: ${providerName}`);
+                    const results = await this.templateGeocode(
+                      providerName, 
+                      config.query, 
+                      geocoderConfig[providerName], 
+                      this.defaults
+                    );
+                    
+                    if (results && results.length > 0) {
+                      console.log('Geocoding succeeded with template provider: ' + providerName);
+                      return { features: results };
+                    }
+                  } else {
+                    console.warn(`Geocoder provider '${providerName}' not found and no config provided`);
                   }
                 } catch (e) {
                   console.error(`Geocoder '${providerName}' failed:`, e.message);
