@@ -151,7 +151,7 @@
                   map.flyTo({
                     center: feature.center,
                     zoom: addressZoom,
-                    duration: 2500,
+                    duration: {{ $mapparams.flyToDuration | default 2500 }},
                     bearing: {{ $mapparams.bearing | default 0 }},
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });

@@ -18,3 +18,4 @@ customAttribution: "" # custom attribution
 interactive: true # whether the map is interactive
 navigationControl: true # whether to show navigation controls
 markerColor: "#114477"
+flyToDuration: 2500 # animation duration in milliseconds when flying to geocoded address
