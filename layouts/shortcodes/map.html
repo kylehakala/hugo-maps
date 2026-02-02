@@ -53,6 +53,35 @@
       #map-{{ $mapname }} {
         width: {{ .Get "width" | default $mapparams.width }};
         height: {{ .Get "height" | default $mapparams.height }};
+        border-radius: inherit;
+      }
+      
+      /* Responsive design - stack on small screens */
+      @media (max-width: 768px) {
+        #map-{{ $mapname }} {
+          height: 250px;
+        }
+      }
+      
+      /* Dark mode popup styling */
+      @media (prefers-color-scheme: dark) {
+        #map-{{ $mapname }} .maplibregl-popup-content {
+          background-color: #2a2a2a;
+          color: #e0e0e0;
+          border: 1px solid #444;
+        }
+        #map-{{ $mapname }} .maplibregl-popup-tip {
+          border-top-color: #2a2a2a;
+        }
+      }
+      
+      /* Light mode popup styling */
+      @media (prefers-color-scheme: light) {
+        #map-{{ $mapname }} .maplibregl-popup-content {
+          background-color: #fff;
+          color: #333;
+          border: 1px solid #ddd;
+        }
       }
     </style>
 
