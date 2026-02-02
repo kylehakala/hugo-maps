@@ -169,8 +169,10 @@
             
             forwardGeocode: async function(config) {
               const providers = Array.isArray(config.providers) ? config.providers : [config.providers || 'nominatim'];
-              const features = [];
               const geocoderConfig = config.config || {};
+              
+              console.log('forwardGeocode called with providers:', providers);
+              console.log('forwardGeocode config:', geocoderConfig);
               
               for (const providerName of providers) {
                 try {
@@ -180,20 +182,22 @@
                     continue;
                   }
                   
+                  console.log(`Trying provider: ${providerName}`);
                   const results = await provider.forwardGeocode(config.query, geocoderConfig);
+                  console.log(`Provider ${providerName} returned:`, results);
+                  
                   if (results && results.length > 0) {
+                    console.log('Geocoding succeeded with ' + providerName);
                     return { features: results };
                   }
                 } catch (e) {
-                  console.warn(`Geocoder '${providerName}' failed:`, e.message);
+                  console.error(`Geocoder '${providerName}' failed with error:`, e);
                   continue;
                 }
               }
               
-              if (features.length === 0) {
-                console.error('All geocoders failed or returned no results');
-              }
-              return { features };
+              console.error('All geocoders failed or returned no results');
+              return { features: [] };
             }
           }
         };
@@ -238,16 +242,16 @@
           {{- end }}
 
           {{- if $mapAddress }}
+          {{- $geocodersValue := $mapparams.geocoders | default "nominatim" -}}
           const handleGeocode = function() {
-            {{- $geocodersValue := $mapparams.geocoders | default "nominatim" -}}
-            {{- if reflect.IsSlice $geocodersValue -}}
-            const geocoders = {{ $geocodersValue | jsonify }};
-            {{- else -}}
-            const geocoders = "{{ $geocodersValue }}";
+            {{- if reflect.IsSlice $geocodersValue }}
+            const providers = {{ $geocodersValue | jsonify }};
+            {{- else }}
+            const providers = "{{ $geocodersValue }}";
             {{- end }}
             window.hugoMapsHelpers.geocoderApi.forwardGeocode({
               query: '{{ $mapAddress }}',
-              providers: geocoders,
+              providers: providers,
               config: {{ $mapparams.geocoderConfig | default dict | jsonify | safeJS }}
             })
               .then((result) => {
