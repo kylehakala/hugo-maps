@@ -63,6 +63,14 @@ A fully interactive map with all controls enabled.
 
 ---
 
+### Example 6: Auto-Geocoding (Address Lookup)
+
+{{< map name="simple_map" address="Space Needle, Seattle" >}}
+
+This map demonstrates automatic address geocoding. Pass an `address` parameter to any map shortcode and it will automatically search for that location using OpenStreetMap's Nominatim service and fly to it!
+
+---
+
 ## Getting Started
 
 ### 1. Add to Your Hugo Project
