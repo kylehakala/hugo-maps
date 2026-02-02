@@ -119,31 +119,62 @@
           },
 
           geocoderApi: {
-            forwardGeocode: async function(config) {
-              const features = [];
-              try {
-                const searchQuery = encodeURIComponent(config.query);
-                const request = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
-                const response = await fetch(request);
-                const geojson = await response.json();
-                
-                for (const feature of geojson.features) {
-                  const center = [
-                    feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
-                    feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
-                  ];
-                  features.push({
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: center },
-                    place_name: feature.properties.display_name,
-                    properties: feature.properties,
-                    text: feature.properties.display_name,
-                    place_type: ['place'],
-                    center
-                  });
+            providers: {
+              nominatim: {
+                name: 'OpenStreetMap Nominatim',
+                forwardGeocode: async function(query, config) {
+                  const baseUrl = (config && config.nominatim && config.nominatim.url) || 'https://nominatim.openstreetmap.org';
+                  const searchQuery = encodeURIComponent(query);
+                  const request = `${baseUrl}/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
+                  const response = await fetch(request);
+                  const geojson = await response.json();
+                  
+                  const features = [];
+                  for (const feature of geojson.features) {
+                    const center = [
+                      feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+                      feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
+                    ];
+                    features.push({
+                      type: 'Feature',
+                      geometry: { type: 'Point', coordinates: center },
+                      place_name: feature.properties.display_name,
+                      properties: feature.properties,
+                      text: feature.properties.display_name,
+                      place_type: ['place'],
+                      center
+                    });
+                  }
+                  return features;
                 }
-              } catch (e) {
-                console.error('Geocoder error:', e);
+              }
+            },
+            
+            forwardGeocode: async function(config) {
+              const providers = Array.isArray(config.providers) ? config.providers : [config.providers || 'nominatim'];
+              const features = [];
+              const geocoderConfig = config.config || {};
+              
+              for (const providerName of providers) {
+                try {
+                  const provider = this.providers[providerName];
+                  if (!provider) {
+                    console.warn(`Geocoder provider '${providerName}' not found`);
+                    continue;
+                  }
+                  
+                  const results = await provider.forwardGeocode(config.query, geocoderConfig);
+                  if (results && results.length > 0) {
+                    return { features: results };
+                  }
+                } catch (e) {
+                  console.warn(`Geocoder '${providerName}' failed:`, e.message);
+                  continue;
+                }
+              }
+              
+              if (features.length === 0) {
+                console.error('All geocoders failed or returned no results');
               }
               return { features };
             }
@@ -191,7 +222,11 @@
 
           {{- if $mapAddress }}
           const handleGeocode = function() {
-            window.hugoMapsHelpers.geocoderApi.forwardGeocode({query: '{{ $mapAddress }}'})
+            window.hugoMapsHelpers.geocoderApi.forwardGeocode({
+              query: '{{ $mapAddress }}',
+              providers: {{ $mapparams.geocoders | default "nominatim" | jsonify }},
+              config: {{ $mapparams.geocoderConfig | default dict | jsonify }}
+            })
               .then((result) => {
                 if (result.features && result.features.length > 0) {
                   const feature = result.features[0];

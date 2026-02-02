@@ -20,3 +20,14 @@ navigationControl: true # whether to show navigation controls
 markerColor: "#114477"
 flyToDuration: 2500 # animation duration in milliseconds when flying to geocoded address
 geocodeParams: "address" # frontmatter parameter(s) to use for geocoding query (e.g., "address" or ["address", "title", "location"])
+geocoders: "nominatim" # which geocoder(s) to use: "nominatim", or array for fallback ["nominatim", "mapbox"]
+geocoderConfig: # Provider-specific configuration (endpoints, API keys, etc.)
+  nominatim:
+    url: "https://nominatim.openstreetmap.org" # Custom Nominatim instance URL (optional)
+    # No API key needed for public Nominatim
+  # mapbox:
+  #   apiKey: "your-mapbox-api-key"
+  #   url: "https://api.mapbox.com"
+  # google:
+  #   apiKey: "your-google-api-key"
+  #   url: "https://maps.googleapis.com"
