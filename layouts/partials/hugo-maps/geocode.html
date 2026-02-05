@@ -84,7 +84,8 @@
       {{- else -}}
         {{- with $fetchResult.Value -}}
           {{- /* Explicitly unmarshal as JSON */ -}}
-          {{- $parseResult := try (unmarshal .Content) -}}
+          {{- $jsonOpts := dict "contentType" "application/json" -}}
+          {{- $parseResult := try (transform.Unmarshal $jsonOpts .Content) -}}
           {{- if $parseResult.Err -}}
             {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $parseResult.Err -}}
           {{- else -}}
