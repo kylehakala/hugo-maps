@@ -139,6 +139,7 @@
                   
                   const response = await fetch(request, {
                     headers: {
+                      'User-Agent': userAgent,
                       'Accept': 'application/json'
                     }
                   });
@@ -279,8 +280,11 @@
               
               console.log(`Template geocoder [${providerName}] request:`, url);
               
-              // Build headers (Note: User-Agent cannot be set in browser fetch due to CORS)
+              // Build headers
               const headers = { 'Accept': 'application/json' };
+              if (cfg.userAgent || defaults.userAgent) {
+                headers['User-Agent'] = cfg.userAgent || defaults.userAgent;
+              }
               if (cfg.headers) {
                 Object.assign(headers, cfg.headers);
               }
@@ -509,34 +513,28 @@
                     bearing: {{ $mapparams.bearing | default 0 }},
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
-                  // Create a marker at the geocoded location with a popup
-                  const addressPopup = new maplibregl.Popup({ closeOnClick: false })
-                    .setHTML("<strong>{{ .Page.Title }}</strong>");
+                  // Create a marker at the geocoded location with a popup on hover
                   const addressMarker = new maplibregl.Marker()
                     .setLngLat(feature.center)
-                    .setPopup(addressPopup)
                     .addTo(map);
                   
-                  // Add hover events to show/hide popup
-                  const addressMarkerEl = addressMarker.getElement();
-                  addressMarkerEl.addEventListener('mouseenter', () => {
-                    addressPopup.addTo(map);
-                  });
-                  addressMarkerEl.addEventListener('mouseleave', () => {
-                    addressPopup.remove();
+                  const addressPopup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false
                   });
                   
-                  // Also show popup on hover over the popup itself
-                  addressPopup.on('open', () => {
-                    const popupEl = addressPopup.getElement();
-                    if (popupEl) {
-                      popupEl.addEventListener('mouseenter', () => {
-                        addressPopup.addTo(map);
-                      });
-                      popupEl.addEventListener('mouseleave', () => {
-                        addressPopup.remove();
-                      });
-                    }
+                  const addressMarkerEl = addressMarker.getElement();
+                  addressMarkerEl.style.cursor = 'pointer';
+                  
+                  addressMarkerEl.addEventListener('mouseenter', () => {
+                    addressPopup
+                      .setLngLat(feature.center)
+                      .setHTML("<strong>{{ .Page.Title }}</strong>")
+                      .addTo(map);
+                  });
+                  
+                  addressMarkerEl.addEventListener('mouseleave', () => {
+                    addressPopup.remove();
                   });
                 }
               })
@@ -552,35 +550,30 @@
           }
           {{- end }}
 
-          {{- range $mapparams.markers }}
+          {{- range $index, $marker := $mapparams.markers }}
           (function() {
-            const popup = new maplibregl.Popup({ closeOnClick: false })
-              .setHTML("{{ .text }}");
-            const marker = new maplibregl.Marker()
-              .setLngLat(window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }}))
-              .setPopup(popup)
+            const markerCoords{{ $index }} = window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }});
+            const marker{{ $index }} = new maplibregl.Marker()
+              .setLngLat(markerCoords{{ $index }})
               .addTo(map);
             
-            // Add hover events to show/hide popup
-            const markerEl = marker.getElement();
-            markerEl.addEventListener('mouseenter', () => {
-              popup.addTo(map);
-            });
-            markerEl.addEventListener('mouseleave', () => {
-              popup.remove();
+            const popup{{ $index }} = new maplibregl.Popup({
+              closeButton: false,
+              closeOnClick: false
             });
             
-            // Also show popup on hover over the popup itself
-            popup.on('open', () => {
-              const popupEl = popup.getElement();
-              if (popupEl) {
-                popupEl.addEventListener('mouseenter', () => {
-                  popup.addTo(map);
-                });
-                popupEl.addEventListener('mouseleave', () => {
-                  popup.remove();
-                });
-              }
+            const markerEl{{ $index }} = marker{{ $index }}.getElement();
+            markerEl{{ $index }}.style.cursor = 'pointer';
+            
+            markerEl{{ $index }}.addEventListener('mouseenter', () => {
+              popup{{ $index }}
+                .setLngLat(markerCoords{{ $index }})
+                .setHTML("{{ .text }}")
+                .addTo(map);
+            });
+            
+            markerEl{{ $index }}.addEventListener('mouseleave', () => {
+              popup{{ $index }}.remove();
             });
           })();
           {{- end }}
