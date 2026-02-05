@@ -570,7 +570,14 @@
                 });
                 
                 if (result.features && result.features.length > 0) {
-                  var coords = result.features[0].center;
+                  var feature = result.features[0];
+                  var coords = feature.center || (feature.geometry && feature.geometry.coordinates);
+                  
+                  if (!coords || !Array.isArray(coords) || coords.length !== 2) {
+                    console.error('Invalid coordinates for ' + loc.address + ':', coords);
+                    continue;
+                  }
+                  
                   var popupContent = loc.description 
                     ? '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong><br>' + loc.description
                     : '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong>';
