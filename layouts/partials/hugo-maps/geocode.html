@@ -83,7 +83,8 @@
         {{- warnf "hugo-maps: Geocoding error for '%s' with %s: %s" $address $providerName $fetchResult.Err -}}
       {{- else -}}
         {{- with $fetchResult.Value -}}
-          {{- $parseResult := try (.Content | transform.Unmarshal) -}}
+          {{- /* Explicitly unmarshal as JSON */ -}}
+          {{- $parseResult := try (unmarshal .Content) -}}
           {{- if $parseResult.Err -}}
             {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $parseResult.Err -}}
           {{- else -}}
@@ -91,7 +92,9 @@
           
           {{- /* Parse response based on provider */ -}}
           {{- if eq $providerName "photon" -}}
-            {{- with index $data.features 0 -}}
+            {{- /* Photon returns GeoJSON with features array */ -}}
+            {{- $features := $data.features | default slice -}}
+            {{- with index $features 0 -}}
               {{- $coords := .geometry.coordinates -}}
               {{- $props := .properties | default dict -}}
               {{- $placeParts := slice -}}
@@ -108,7 +111,9 @@
             {{- end -}}
             
           {{- else if eq $providerName "nominatim" -}}
-            {{- with index $data.features 0 -}}
+            {{- /* Nominatim returns GeoJSON with features array */ -}}
+            {{- $features := $data.features | default slice -}}
+            {{- with index $features 0 -}}
               {{- $coords := slice -}}
               {{- if eq .geometry.type "Point" -}}
                 {{- $coords = .geometry.coordinates -}}
@@ -130,14 +135,21 @@
             
           {{- else -}}
             {{- /* Template geocoder response parsing */ -}}
-            {{- $results := $data -}}
-            {{- with $providerConfig.resultsPath -}}
-              {{- range split . "." -}}
-                {{- $results = index $results . -}}
-              {{- end -}}
-            {{- else -}}
-              {{- with $data.features -}}
-                {{- $results = . -}}
+            {{- /* Handle both array responses and object responses */ -}}
+            {{- $results := slice -}}
+            {{- if reflect.IsSlice $data -}}
+              {{- $results = $data -}}
+            {{- else if reflect.IsMap $data -}}
+              {{- with $providerConfig.resultsPath -}}
+                {{- $nested := $data -}}
+                {{- range split . "." -}}
+                  {{- $nested = index $nested . -}}
+                {{- end -}}
+                {{- $results = $nested -}}
+              {{- else -}}
+                {{- with $data.features -}}
+                  {{- $results = . -}}
+                {{- end -}}
               {{- end -}}
             {{- end -}}
             
