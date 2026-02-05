@@ -514,25 +514,32 @@
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
                   // Create a marker at the geocoded location with a popup
+                  const addressPopup = new maplibregl.Popup({ closeOnClick: false })
+                    .setHTML("<strong>{{ .Page.Title }}</strong>");
                   const addressMarker = new maplibregl.Marker()
                     .setLngLat(feature.center)
-                    .setPopup(
-                      new maplibregl.Popup()
-                        .setHTML("<strong>{{ .Page.Title }}</strong>")
-                    )
-                    .addTo(map)
-                    .togglePopup();
+                    .setPopup(addressPopup)
+                    .addTo(map);
                   
                   // Add hover events to show/hide popup
                   const addressMarkerEl = addressMarker.getElement();
                   addressMarkerEl.addEventListener('mouseenter', () => {
-                    if (!addressMarker.getPopup().isOpen()) {
-                      addressMarker.togglePopup();
-                    }
+                    addressPopup.addTo(map);
                   });
                   addressMarkerEl.addEventListener('mouseleave', () => {
-                    if (addressMarker.getPopup().isOpen()) {
-                      addressMarker.togglePopup();
+                    addressPopup.remove();
+                  });
+                  
+                  // Also show popup on hover over the popup itself
+                  addressPopup.on('open', () => {
+                    const popupEl = addressPopup.getElement();
+                    if (popupEl) {
+                      popupEl.addEventListener('mouseenter', () => {
+                        addressPopup.addTo(map);
+                      });
+                      popupEl.addEventListener('mouseleave', () => {
+                        addressPopup.remove();
+                      });
                     }
                   });
                 }
@@ -551,21 +558,32 @@
 
           {{- range $index, $marker := $mapparams.markers }}
           (function() {
+            const popup{{ $index }} = new maplibregl.Popup({ closeOnClick: false })
+              .setHTML("{{ .text }}");
             const marker{{ $index }} = new maplibregl.Marker()
               .setLngLat(window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }}))
-              .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
+              .setPopup(popup{{ $index }})
               .addTo(map);
             
             // Add hover events to show/hide popup
             const markerEl{{ $index }} = marker{{ $index }}.getElement();
             markerEl{{ $index }}.addEventListener('mouseenter', () => {
-              if (!marker{{ $index }}.getPopup().isOpen()) {
-                marker{{ $index }}.togglePopup();
-              }
+              popup{{ $index }}.addTo(map);
             });
             markerEl{{ $index }}.addEventListener('mouseleave', () => {
-              if (marker{{ $index }}.getPopup().isOpen()) {
-                marker{{ $index }}.togglePopup();
+              popup{{ $index }}.remove();
+            });
+            
+            // Also show popup on hover over the popup itself
+            popup{{ $index }}.on('open', () => {
+              const popupEl{{ $index }} = popup{{ $index }}.getElement();
+              if (popupEl{{ $index }}) {
+                popupEl{{ $index }}.addEventListener('mouseenter', () => {
+                  popup{{ $index }}.addTo(map);
+                });
+                popupEl{{ $index }}.addEventListener('mouseleave', () => {
+                  popup{{ $index }}.remove();
+                });
               }
             });
           })();
