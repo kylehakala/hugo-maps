@@ -14,7 +14,43 @@
     {{- $mapparams = merge $baseparams $defaultparams $mapparams -}}
     {{- $addressZoom := .Get "address-zoom" | default .Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
     
-    {{- /* Build geocode query from configured parameters */ -}}
+    {{- /* Content Map mode - aggregate pages with addresses */ -}}
+    {{- $contentMap := $mapparams.contentMap | default false -}}
+    {{- $locations := slice -}}
+    {{- if $contentMap -}}
+      {{- $pages := site.RegularPages -}}
+      {{- $section := $mapparams.section | default "" -}}
+      {{- if $section -}}
+        {{- $pages = where $pages "Section" $section -}}
+      {{- end -}}
+      {{- $geocodeParams := $mapparams.geocodeParams | default "address" -}}
+      {{- range $pages -}}
+        {{- $addr := "" -}}
+        {{- if reflect.IsSlice $geocodeParams -}}
+          {{- $parts := slice -}}
+          {{- range $geocodeParams -}}
+            {{- $val := index $.Params . -}}
+            {{- if $val -}}
+              {{- $parts = $parts | append (printf "%v" $val) -}}
+            {{- end -}}
+          {{- end -}}
+          {{- $addr = delimit $parts ", " -}}
+        {{- else -}}
+          {{- $addr = index .Params (printf "%v" $geocodeParams) -}}
+        {{- end -}}
+        {{- if $addr -}}
+          {{- $loc := dict 
+              "title" .Title 
+              "link" .Permalink
+              "address" $addr
+              "description" (.Params.description | default "")
+          -}}
+          {{- $locations = $locations | append $loc -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    
+    {{- /* Build geocode query from configured parameters (for single-marker mode) */ -}}
     {{- $geocodeParams := $mapparams.geocodeParams | default "address" -}}
     {{- $mapAddress := "" -}}
     {{- if reflect.IsMap $geocodeParams -}}
@@ -82,6 +118,12 @@
           color: #333;
           border: 1px solid #ddd;
         }
+      }
+      
+      /* Popup link styling */
+      #map-{{ $mapname }} .maplibregl-popup-content a {
+        color: inherit;
+        text-decoration: underline;
       }
     </style>
 
@@ -501,6 +543,81 @@
           map.addControl(new maplibregl.NavigationControl());
           {{- end }}
 
+          {{- if $contentMap }}
+          {{- /* Content Map mode - geocode and display multiple locations */ -}}
+          {{- $geocodersValue := $mapparams.geocoders | default "photon,nominatim" -}}
+          var locations = {{ $locations | jsonify | safeJS }};
+          var geocoderConfig = {{ $mapparams.geocoderConfig | default dict | jsonify | safeJS }};
+          {{- if reflect.IsSlice $geocodersValue }}
+          var providers = {{ $geocodersValue | jsonify }};
+          {{- else }}
+          var providers = "{{ $geocodersValue }}";
+          {{- end }}
+          var popupTrigger = "{{ $mapparams.popupTrigger | default "hover" }}";
+          var markerColor = "{{ $mapparams.markerColor | default "#114477" }}";
+          
+          async function addContentMarkers() {
+            var bounds = new maplibregl.LngLatBounds();
+            var markersAdded = 0;
+            
+            for (var i = 0; i < locations.length; i++) {
+              var loc = locations[i];
+              try {
+                var result = await window.hugoMapsHelpers.geocoderApi.forwardGeocode({
+                  query: loc.address,
+                  providers: providers,
+                  config: geocoderConfig
+                });
+                
+                if (result.features && result.features.length > 0) {
+                  var coords = result.features[0].center;
+                  var popupContent = loc.description 
+                    ? '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong><br>' + loc.description
+                    : '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong>';
+                  
+                  var marker = new maplibregl.Marker({ color: markerColor })
+                    .setLngLat(coords);
+                  
+                  if (popupTrigger === 'click') {
+                    marker.setPopup(new maplibregl.Popup().setHTML(popupContent)).addTo(map);
+                  } else {
+                    marker.addTo(map);
+                    (function(m, c, html) {
+                      var popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 });
+                      var el = m.getElement();
+                      el.style.cursor = 'pointer';
+                      el.addEventListener('mouseenter', function() {
+                        popup.setLngLat(c).setHTML(html).addTo(map);
+                      });
+                      el.addEventListener('mouseleave', function() {
+                        popup.remove();
+                      });
+                    })(marker, coords, popupContent);
+                  }
+                  
+                  bounds.extend(coords);
+                  markersAdded++;
+                }
+              } catch (err) {
+                console.error('Geocode error for ' + loc.address + ':', err);
+              }
+            }
+            
+            if (markersAdded > 1) {
+              map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+            } else if (markersAdded === 1) {
+              map.setCenter(bounds.getCenter());
+              map.setZoom({{ $mapparams.zoom | default 13 }});
+            }
+          }
+          
+          if (map.isStyleLoaded()) {
+            addContentMarkers();
+          } else {
+            map.on('load', addContentMarkers);
+          }
+          {{- else }}
+          {{- /* Single marker mode */ -}}
           {{- if $mapAddress }}
           {{- $geocodersValue := $mapparams.geocoders | default "nominatim" -}}
           const handleGeocode = function() {
@@ -607,6 +724,7 @@
             map.setFeatureState({{ .feature | jsonify }}, {{ .state | jsonify }});
           });
           {{- end }}
+          {{- end }}{{- /* end if not contentMap */ -}}
         }
 
         // Trigger on DOM ready
