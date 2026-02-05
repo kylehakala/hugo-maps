@@ -677,7 +677,7 @@
           {{- if $preGeocodedCoords }}
           // Using pre-geocoded coordinates (build-time geocoding)
           (function() {
-            var preGeocodedCenter = {{ $preGeocodedCoords | jsonify }};
+            var preGeocodedCenter = {{ $preGeocodedCoords | jsonify | safeJS }};
             {{- if $addressZoom }}
             var addressZoom = {{ $addressZoom }};
             {{- else }}
