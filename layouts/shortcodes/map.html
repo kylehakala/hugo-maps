@@ -15,13 +15,19 @@
     {{- $addressZoom := .Get "address-zoom" | default .Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
     
     {{- /* Content Map mode - aggregate pages with addresses */ -}}
-    {{- $contentMap := $mapparams.contentMap | default false -}}
+    {{- $contentMapConfig := $mapparams.contentMap | default dict -}}
+    {{- $contentMapEnabled := $contentMapConfig.enabled | default false -}}
     {{- $locations := slice -}}
-    {{- if $contentMap -}}
+    {{- if $contentMapEnabled -}}
       {{- $pages := site.RegularPages -}}
-      {{- $section := $mapparams.section | default "" -}}
+      {{- $section := $contentMapConfig.section | default "" -}}
       {{- if $section -}}
         {{- $pages = where $pages "Section" $section -}}
+      {{- end -}}
+      {{- /* Apply frontmatter filters */ -}}
+      {{- $filter := $contentMapConfig.filter | default dict -}}
+      {{- range $key, $value := $filter -}}
+        {{- $pages = where $pages (printf ".Params.%s" $key) $value -}}
       {{- end -}}
       {{- $geocodeParams := $mapparams.geocodeParams | default "address" -}}
       {{- range $pages -}}
@@ -543,7 +549,7 @@
           map.addControl(new maplibregl.NavigationControl());
           {{- end }}
 
-          {{- if $contentMap }}
+          {{- if $contentMapEnabled }}
           {{- /* Content Map mode - geocode and display multiple locations */ -}}
           {{- $geocodersValue := $mapparams.geocoders | default "photon,nominatim" -}}
           var locations = {{ $locations | jsonify | safeJS }};

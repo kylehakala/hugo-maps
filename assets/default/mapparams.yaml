@@ -20,8 +20,10 @@ navigationControl: true # whether to show navigation controls
 markerColor: "#114477"
 popupTrigger: hover # how popups are triggered: "hover" or "click"
 flyToDuration: 2500 # animation duration in milliseconds when flying to geocoded address
-contentMap: false # when true, aggregates pages with addresses into a multi-marker map
-section: "" # filter pages to this section when contentMap is true (e.g., "locations")
+contentMap: # aggregates pages with addresses into a multi-marker map
+  enabled: false # set to true to enable content map mode
+  section: "" # filter pages to this section (e.g., "locations")
+  filter: {} # filter pages by frontmatter values (e.g., {type: "restaurant", featured: true})
 geocodeParams: "address" # frontmatter parameter(s) to use for geocoding query (e.g., "address" or ["address", "title", "location"])
 geocoders: "photon,nominatim" # which geocoder(s) to use: "photon", "nominatim", or comma-separated for fallback
 geocoderConfig: # Provider-specific configuration (endpoints, API keys, etc.)
