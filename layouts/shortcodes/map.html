@@ -570,40 +570,36 @@
                 });
                 
                 if (result.features && result.features.length > 0) {
-                  var feature = result.features[0];
-                  var coords = feature.center || (feature.geometry && feature.geometry.coordinates);
+                  var coords = result.features[0].center;
                   
-                  if (!coords || !Array.isArray(coords) || coords.length !== 2) {
-                    console.error('Invalid coordinates for ' + loc.address + ':', coords);
-                    continue;
+                  if (coords && Array.isArray(coords) && coords.length === 2) {
+                    var popupContent = loc.description 
+                      ? '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong><br>' + loc.description
+                      : '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong>';
+                    
+                    var marker = new maplibregl.Marker({ color: markerColor })
+                      .setLngLat(coords);
+                    
+                    if (popupTrigger === 'click') {
+                      marker.setPopup(new maplibregl.Popup().setHTML(popupContent)).addTo(map);
+                    } else {
+                      marker.addTo(map);
+                      (function(m, c, html) {
+                        var popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 });
+                        var el = m.getElement();
+                        el.style.cursor = 'pointer';
+                        el.addEventListener('mouseenter', function() {
+                          popup.setLngLat(c).setHTML(html).addTo(map);
+                        });
+                        el.addEventListener('mouseleave', function() {
+                          popup.remove();
+                        });
+                      })(marker, coords, popupContent);
+                    }
+                    
+                    bounds.extend(coords);
+                    markersAdded++;
                   }
-                  
-                  var popupContent = loc.description 
-                    ? '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong><br>' + loc.description
-                    : '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong>';
-                  
-                  var marker = new maplibregl.Marker({ color: markerColor })
-                    .setLngLat(coords);
-                  
-                  if (popupTrigger === 'click') {
-                    marker.setPopup(new maplibregl.Popup().setHTML(popupContent)).addTo(map);
-                  } else {
-                    marker.addTo(map);
-                    (function(m, c, html) {
-                      var popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 });
-                      var el = m.getElement();
-                      el.style.cursor = 'pointer';
-                      el.addEventListener('mouseenter', function() {
-                        popup.setLngLat(c).setHTML(html).addTo(map);
-                      });
-                      el.addEventListener('mouseleave', function() {
-                        popup.remove();
-                      });
-                    })(marker, coords, popupContent);
-                  }
-                  
-                  bounds.extend(coords);
-                  markersAdded++;
                 }
               } catch (err) {
                 console.error('Geocode error for ' + loc.address + ':', err);
