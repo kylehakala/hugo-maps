@@ -71,8 +71,11 @@
         {{- $url = $url | replaceRE `\{apiKey\}` $apiKey -}}
       {{- end -}}
       
-      {{- $userAgent := $providerConfig.userAgent | default "hugo-maps/1.0" -}}
-      {{- $headers = dict "Accept" "application/json" "User-Agent" $userAgent -}}
+      {{- /* Template geocoders don't need User-Agent since Hugo handles the request */ -}}
+      {{- $headers = dict "Accept" "application/json" -}}
+      {{- if $providerConfig.userAgent -}}
+        {{- $headers = dict "Accept" "application/json" "User-Agent" $providerConfig.userAgent -}}
+      {{- end -}}
     {{- end -}}
     
     {{- if $url -}}
