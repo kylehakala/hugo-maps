@@ -29,6 +29,21 @@
       {{- range $key, $value := $filter -}}
         {{- $pages = where $pages (printf ".Params.%s" $key) $value -}}
       {{- end -}}
+      {{- /* Apply taxonomy term filters */ -}}
+      {{- $terms := $contentMapConfig.terms | default dict -}}
+      {{- range $taxonomy, $termValue := $terms -}}
+        {{- if reflect.IsSlice $termValue -}}
+          {{- /* Multiple terms - page must have at least one */ -}}
+          {{- $termPages := slice -}}
+          {{- range $term := $termValue -}}
+            {{- $termPages = $termPages | append (where $pages (printf ".Params.%s" $taxonomy) "intersect" (slice $term)) -}}
+          {{- end -}}
+          {{- $pages = $termPages | uniq -}}
+        {{- else -}}
+          {{- /* Single term */ -}}
+          {{- $pages = where $pages (printf ".Params.%s" $taxonomy) "intersect" (slice $termValue) -}}
+        {{- end -}}
+      {{- end -}}
       {{- $geocodeParams := $mapparams.geocodeParams | default "address" -}}
       {{- range $pages -}}
         {{- $addr := "" -}}

@@ -24,6 +24,7 @@ contentMap: # aggregates pages with addresses into a multi-marker map
   enabled: false # set to true to enable content map mode
   section: "" # filter pages to this section (e.g., "locations")
   filter: {} # filter pages by frontmatter values (e.g., {type: "restaurant", featured: true})
+  terms: {} # filter pages by taxonomy terms (e.g., {categories: "restaurants", tags: ["featured", "popular"]})
 geocodeParams: "address" # frontmatter parameter(s) to use for geocoding query (e.g., "address" or ["address", "title", "location"])
 geocoders: "photon,nominatim" # which geocoder(s) to use: "photon", "nominatim", or comma-separated for fallback
 geocoderConfig: # Provider-specific configuration (endpoints, API keys, etc.)
