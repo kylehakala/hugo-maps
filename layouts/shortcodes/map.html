@@ -478,7 +478,7 @@
             return;
           }
 
-          const center = window.hugoMapsHelpers.validateLngLat({{ $mapparams.center | jsonify }}) || [-0.127758, 51.507351];
+          const center = {{ $mapparams.center | jsonify }} || [-0.127758, 51.507351];
           
           const map = new maplibregl.Map({
             container: mapId,
