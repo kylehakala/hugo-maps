@@ -378,13 +378,17 @@
               
               console.log(`Template geocoder [${providerName}] request:`, url);
               
-              // Build headers
+              // Build headers - Note: User-Agent is NOT included for browser requests
+              // because most APIs block it via CORS. Use build-time geocoding for APIs
+              // that require User-Agent headers.
               const headers = { 'Accept': 'application/json' };
-              if (cfg.userAgent || defaults.userAgent) {
-                headers['User-Agent'] = cfg.userAgent || defaults.userAgent;
-              }
               if (cfg.headers) {
-                Object.assign(headers, cfg.headers);
+                // Allow custom headers but filter out User-Agent (blocked by CORS)
+                Object.entries(cfg.headers).forEach(([key, value]) => {
+                  if (key.toLowerCase() !== 'user-agent') {
+                    headers[key] = value;
+                  }
+                });
               }
               
               const response = await fetch(url, { headers });
