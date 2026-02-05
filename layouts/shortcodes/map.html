@@ -565,36 +565,36 @@
 
           {{- range $index, $marker := $mapparams.markers }}
           (function() {
-            const markerCoords{{- $index }} = window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }});
-            const marker{{- $index }} = new maplibregl.Marker()
-              .setLngLat(markerCoords{{- $index }});
+            const markerCoords_{{ $index }} = window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }});
+            const marker_{{ $index }} = new maplibregl.Marker()
+              .setLngLat(markerCoords_{{ $index }});
             
             {{- if eq ($mapparams.popupTrigger | default "hover") "click" }}
             // Click-triggered popup
-            marker{{- $index }}
+            marker_{{ $index }}
               .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
               .addTo(map);
             {{- else }}
             // Hover-triggered popup
-            marker{{- $index }}.addTo(map);
+            marker_{{ $index }}.addTo(map);
             
-            const popup{{- $index }} = new maplibregl.Popup({
+            const popup_{{ $index }} = new maplibregl.Popup({
               closeButton: false,
               closeOnClick: false
             });
             
-            const markerEl{{- $index }} = marker{{- $index }}.getElement();
-            markerEl{{- $index }}.style.cursor = 'pointer';
+            const markerEl_{{ $index }} = marker_{{ $index }}.getElement();
+            markerEl_{{ $index }}.style.cursor = 'pointer';
             
-            markerEl{{- $index }}.addEventListener('mouseenter', () => {
-              popup{{- $index }}
-                .setLngLat(markerCoords{{- $index }})
+            markerEl_{{ $index }}.addEventListener('mouseenter', () => {
+              popup_{{ $index }}
+                .setLngLat(markerCoords_{{ $index }})
                 .setHTML("{{ .text }}")
                 .addTo(map);
             });
             
-            markerEl{{- $index }}.addEventListener('mouseleave', () => {
-              popup{{- $index }}.remove();
+            markerEl_{{ $index }}.addEventListener('mouseleave', () => {
+              popup_{{ $index }}.remove();
             });
             {{- end }}
           })();
