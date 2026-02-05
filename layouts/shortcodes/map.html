@@ -139,7 +139,6 @@
                   
                   const response = await fetch(request, {
                     headers: {
-                      'User-Agent': userAgent,
                       'Accept': 'application/json'
                     }
                   });
@@ -280,11 +279,8 @@
               
               console.log(`Template geocoder [${providerName}] request:`, url);
               
-              // Build headers
+              // Build headers (Note: User-Agent cannot be set in browser fetch due to CORS)
               const headers = { 'Accept': 'application/json' };
-              if (cfg.userAgent || defaults.userAgent) {
-                headers['User-Agent'] = cfg.userAgent || defaults.userAgent;
-              }
               if (cfg.headers) {
                 Object.assign(headers, cfg.headers);
               }
