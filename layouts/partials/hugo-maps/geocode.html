@@ -86,13 +86,23 @@
         {{- warnf "hugo-maps: Geocoding error for '%s' with %s: %s" $address $providerName $fetchResult.Err -}}
       {{- else -}}
         {{- with $fetchResult.Value -}}
-          {{- /* Explicitly unmarshal as JSON */ -}}
-          {{- $jsonOpts := dict "contentType" "application/json" -}}
-          {{- $parseResult := try (transform.Unmarshal $jsonOpts .Content) -}}
+          {{- /* Parse JSON response - use resource's Unmarshal method for proper content type handling */ -}}
+          {{- $data := dict -}}
+          {{- $parseError := false -}}
+          {{- $parseResult := try .Unmarshal -}}
           {{- if $parseResult.Err -}}
-            {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $parseResult.Err -}}
+            {{- /* Fallback: try parsing .Content as JSON directly */ -}}
+            {{- $jsonParseResult := try (transform.Unmarshal .Content) -}}
+            {{- if $jsonParseResult.Err -}}
+              {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $jsonParseResult.Err -}}
+              {{- $parseError = true -}}
+            {{- else -}}
+              {{- $data = $jsonParseResult.Value -}}
+            {{- end -}}
           {{- else -}}
-            {{- $data := $parseResult.Value -}}
+            {{- $data = $parseResult.Value -}}
+          {{- end -}}
+          {{- if not $parseError -}}
           
           {{- /* Parse response based on provider */ -}}
           {{- if eq $providerName "photon" -}}
@@ -202,12 +212,18 @@
               {{- end -}}
             {{- end -}}
           {{- end -}}
-          {{- end -}}{{- /* end if not parseResult.Err */ -}}
+          {{- end -}}{{- /* end if not parseError */ -}}
         {{- end -}}{{- /* end with fetchResult.Value */ -}}
       {{- end -}}{{- /* end if not fetchResult.Err */ -}}
     {{- end -}}{{- /* end if $url */ -}}
   {{- end -}}{{- /* end if not $result.success */ -}}
 {{- end -}}{{- /* end range $geocoderList */ -}}
+
+{{- /* Log warning if all geocoders failed */ -}}
+{{- if and $address (not $result.success) -}}
+  {{- warnf "hugo-maps: Build-time geocoding failed for '%s' - tried geocoders: %s. Client-side fallback will be used." $address $geocoders -}}
+{{- end -}}
+
 {{- end -}}{{- /* end if $address */ -}}
 
 {{ return $result }}
