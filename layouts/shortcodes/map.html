@@ -520,7 +520,8 @@
             return;
           }
 
-          const center = {{ $mapparams.center | jsonify }} || [-0.127758, 51.507351];
+          {{- $centerCoords := $mapparams.center | default (slice -0.127758 51.507351) }}
+          var center = {{ $centerCoords | jsonify }};
           
           const map = new maplibregl.Map({
             container: mapId,
