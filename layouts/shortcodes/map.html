@@ -94,23 +94,39 @@
           validateLngLat: function(coords) {
             if (!coords) return null;
             if (typeof coords === 'string') {
+              // Remove any extra whitespace
+              coords = coords.trim();
+              // Try to parse as JSON
               try {
                 coords = JSON.parse(coords);
               } catch (e) {
-                return null;
+                // Try comma-separated format: "-93.1023,44.9532"
+                var parts = coords.split(',');
+                if (parts.length === 2) {
+                  var lng = parseFloat(parts[0].trim());
+                  var lat = parseFloat(parts[1].trim());
+                  if (!isNaN(lng) && !isNaN(lat)) {
+                    coords = [lng, lat];
+                  } else {
+                    return null;
+                  }
+                } else {
+                  return null;
+                }
               }
             }
             if (Array.isArray(coords) && coords.length === 2) {
-              const [first, second] = coords;
-              if (typeof first === 'number' && typeof second === 'number' && 
+              var first = parseFloat(coords[0]);
+              var second = parseFloat(coords[1]);
+              if (!isNaN(first) && !isNaN(second) &&
                   first >= -180 && first <= 180 && second >= -90 && second <= 90) {
-                return coords;
+                return [first, second];
               }
             }
             if (typeof coords === 'object' && coords !== null) {
-              let lng = coords.lng || coords.lon;
-              let lat = coords.lat;
-              if (typeof lng === 'number' && typeof lat === 'number' &&
+              var lng = parseFloat(coords.lng || coords.lon);
+              var lat = parseFloat(coords.lat);
+              if (!isNaN(lng) && !isNaN(lat) &&
                   lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
                 return [lng, lat];
               }
