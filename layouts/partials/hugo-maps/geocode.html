@@ -86,13 +86,18 @@
         {{- warnf "hugo-maps: Geocoding error for '%s' with %s: %s" $address $providerName $fetchResult.Err -}}
       {{- else -}}
         {{- with $fetchResult.Value -}}
-          {{- /* Parse JSON response - use resource's Unmarshal method for proper content type handling */ -}}
+          {{- /* Parse JSON response */ -}}
           {{- $data := dict -}}
           {{- $parseError := false -}}
+          {{- /* First try the resource's Unmarshal method */ -}}
           {{- $parseResult := try .Unmarshal -}}
           {{- if $parseResult.Err -}}
-            {{- /* Fallback: try parsing .Content as JSON directly */ -}}
-            {{- $jsonParseResult := try (transform.Unmarshal .Content) -}}
+            {{- /* Log the content type for debugging */ -}}
+            {{- warnf "hugo-maps: Resource Unmarshal failed for '%s', MediaType=%s, trying fallback. Error: %s" $address .MediaType.Type $parseResult.Err -}}
+            {{- /* Fallback: parse .Content as JSON using transform.Unmarshal with explicit options */ -}}
+            {{- $content := .Content -}}
+            {{- /* Wrap in a temporary JSON structure to help Hugo identify the format */ -}}
+            {{- $jsonParseResult := try (unmarshal (dict "mediaType" "application/json") $content) -}}
             {{- if $jsonParseResult.Err -}}
               {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $jsonParseResult.Err -}}
               {{- $parseError = true -}}
