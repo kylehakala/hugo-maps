@@ -514,7 +514,7 @@
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
                   // Create a marker at the geocoded location with popup
-                  const addressMarker = new maplibregl.Marker()
+                  var addressMarker = new maplibregl.Marker()
                     .setLngLat(feature.center);
                   
                   {{- if eq ($mapparams.popupTrigger | default "hover") "click" }}
@@ -530,22 +530,23 @@
                   // Hover-triggered popup
                   addressMarker.addTo(map);
                   
-                  const addressPopup = new maplibregl.Popup({
+                  var addressPopup = new maplibregl.Popup({
                     closeButton: false,
-                    closeOnClick: false
+                    closeOnClick: false,
+                    offset: 25
                   });
                   
-                  const addressMarkerEl = addressMarker.getElement();
+                  var addressMarkerEl = addressMarker.getElement();
                   addressMarkerEl.style.cursor = 'pointer';
                   
-                  addressMarkerEl.addEventListener('mouseenter', () => {
+                  addressMarkerEl.addEventListener('mouseenter', function() {
                     addressPopup
                       .setLngLat(feature.center)
                       .setHTML("<strong>{{ .Page.Title }}</strong>")
                       .addTo(map);
                   });
                   
-                  addressMarkerEl.addEventListener('mouseleave', () => {
+                  addressMarkerEl.addEventListener('mouseleave', function() {
                     addressPopup.remove();
                   });
                   {{- end }}
@@ -572,7 +573,7 @@
             marker.setPopup(new maplibregl.Popup().setHTML("{{ .text }}")).addTo(map);
             {{- else }}
             marker.addTo(map);
-            var popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
+            var popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 });
             var el = marker.getElement();
             el.style.cursor = 'pointer';
             el.addEventListener('mouseenter', function() {
