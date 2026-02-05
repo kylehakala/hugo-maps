@@ -514,7 +514,7 @@
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
                   // Create a marker at the geocoded location with a popup
-                  new maplibregl.Marker()
+                  const addressMarker = new maplibregl.Marker()
                     .setLngLat(feature.center)
                     .setPopup(
                       new maplibregl.Popup()
@@ -522,6 +522,19 @@
                     )
                     .addTo(map)
                     .togglePopup();
+                  
+                  // Add hover events to show/hide popup
+                  const addressMarkerEl = addressMarker.getElement();
+                  addressMarkerEl.addEventListener('mouseenter', () => {
+                    if (!addressMarker.getPopup().isOpen()) {
+                      addressMarker.togglePopup();
+                    }
+                  });
+                  addressMarkerEl.addEventListener('mouseleave', () => {
+                    if (addressMarker.getPopup().isOpen()) {
+                      addressMarker.togglePopup();
+                    }
+                  });
                 }
               })
               .catch((err) => {
@@ -536,11 +549,26 @@
           }
           {{- end }}
 
-          {{- range $mapparams.markers }}
-          new maplibregl.Marker()
-            .setLngLat(window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }}))
-            .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
-            .addTo(map);
+          {{- range $index, $marker := $mapparams.markers }}
+          (function() {
+            const marker{{ $index }} = new maplibregl.Marker()
+              .setLngLat(window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }}))
+              .setPopup(new maplibregl.Popup().setHTML("{{ .text }}"))
+              .addTo(map);
+            
+            // Add hover events to show/hide popup
+            const markerEl{{ $index }} = marker{{ $index }}.getElement();
+            markerEl{{ $index }}.addEventListener('mouseenter', () => {
+              if (!marker{{ $index }}.getPopup().isOpen()) {
+                marker{{ $index }}.togglePopup();
+              }
+            });
+            markerEl{{ $index }}.addEventListener('mouseleave', () => {
+              if (marker{{ $index }}.getPopup().isOpen()) {
+                marker{{ $index }}.togglePopup();
+              }
+            });
+          })();
           {{- end }}
 
           {{- range $mapparams.setfeaturestate }}
