@@ -650,7 +650,7 @@
                     pitch: {{ $mapparams.pitch | default 0 }}
                   });
                   // Create a marker at the geocoded location with popup
-                  var addressMarker = new maplibregl.Marker()
+                  var addressMarker = new maplibregl.Marker({ color: '{{ $mapparams.markerColor | default "#114477" }}' })
                     .setLngLat(feature.center);
                   
                   {{- if eq ($mapparams.popupTrigger | default "hover") "click" }}
@@ -703,7 +703,7 @@
           {{- range $mapparams.markers }}
           (function() {
             var coords = window.hugoMapsHelpers.validateLngLat({{ .location | jsonify }});
-            var marker = new maplibregl.Marker().setLngLat(coords);
+            var marker = new maplibregl.Marker({ color: '{{ $mapparams.markerColor | default "#114477" }}' }).setLngLat(coords);
             
             {{- if eq ($mapparams.popupTrigger | default "hover") "click" }}
             marker.setPopup(new maplibregl.Popup().setHTML("{{ .text }}")).addTo(map);
