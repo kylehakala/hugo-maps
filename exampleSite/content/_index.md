@@ -49,6 +49,14 @@ The same style, but with a dark theme for better visibility in low-light conditi
 
 ---
 
+### Example 4: Address Geocoding (Space Needle)
+
+{{< map name="address_map" >}}
+
+This map uses the `address` field from the page frontmatter ("Space Needle, Seattle"). The geocoding is performed at **build time**, so no client-side API calls are needed!
+
+---
+
 ## Getting Started
 
 ### 1. Add to Your Hugo Project

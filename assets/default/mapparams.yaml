@@ -4,6 +4,7 @@ tilesMinZoom: # minimum zoom level for local maps
 tilesMaxZoom: # maximum zoom level for local maps
 center: [-0.127758, 51.507351] # center of the map
 minZoom: 0 # minimum zoom level
+geocodeAtBuild: true # pre-render geocoding at Hugo build time (faster page loads, no client-side API calls)
 maxZoom: 23 # maximum zoom level
 zoom: 11 # initial zoom level
 minPitch: 0 # minimum pitch

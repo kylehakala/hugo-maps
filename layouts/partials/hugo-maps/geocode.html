@@ -1,0 +1,197 @@
+{{- /*
+  Build-time geocoding partial for hugo-maps.
+  
+  This partial geocodes an address during Hugo build using resources.GetRemote.
+  Results are cached by Hugo's resource caching mechanism.
+  
+  Usage:
+    {{ $coords := partial "hugo-maps/geocode.html" (dict "address" "123 Main St" "config" $mapparams) }}
+  
+  Returns:
+    A dict with: { "lng": float, "lat": float, "placeName": string, "success": bool }
+*/ -}}
+
+{{- $address := .address -}}
+{{- $config := .config | default dict -}}
+{{- $result := dict "success" false "lng" 0.0 "lat" 0.0 "placeName" "" -}}
+
+{{- if $address -}}
+
+{{- /* Get geocoder configuration */ -}}
+{{- $geocoders := $config.geocoders | default "photon,nominatim" -}}
+{{- $geocoderConfig := $config.geocoderConfig | default dict -}}
+
+{{- /* Parse geocoder list */ -}}
+{{- $geocoderList := slice -}}
+{{- if reflect.IsSlice $geocoders -}}
+  {{- $geocoderList = $geocoders -}}
+{{- else -}}
+  {{- $geocoderList = split $geocoders "," -}}
+{{- end -}}
+
+{{- /* Try each geocoder in order until one succeeds */ -}}
+{{- range $geocoderList -}}
+  {{- $providerName := . | strings.TrimSpace -}}
+  {{- if not $result.success -}}
+    {{- $providerConfig := index $geocoderConfig $providerName | default dict -}}
+    
+    {{- /* Build the geocoding request based on provider */ -}}
+    {{- $url := "" -}}
+    {{- $headers := dict -}}
+    
+    {{- if eq $providerName "photon" -}}
+      {{- $baseUrl := $providerConfig.url | default "https://photon.komoot.io" -}}
+      {{- $url = printf "%s/api/?q=%s&limit=1" $baseUrl (urlquery $address) -}}
+      {{- $headers = dict "Accept" "application/json" -}}
+      
+    {{- else if eq $providerName "nominatim" -}}
+      {{- $baseUrl := $providerConfig.url | default "https://nominatim.openstreetmap.org" -}}
+      {{- $userAgent := $providerConfig.userAgent | default "hugo-maps/1.0" -}}
+      {{- $url = printf "%s/search?q=%s&format=geojson&limit=1" $baseUrl (urlquery $address) -}}
+      {{- $headers = dict "Accept" "application/json" "User-Agent" $userAgent -}}
+      
+    {{- else if $providerConfig.url -}}
+      {{- /* Template-based geocoder for custom providers */ -}}
+      {{- $baseUrl := $providerConfig.url -}}
+      {{- $apiKey := $providerConfig.apiKey | default "" -}}
+      
+      {{- /* Build query parameters */ -}}
+      {{- $queryParams := slice -}}
+      {{- range $key, $value := $providerConfig.params | default dict -}}
+        {{- $paramValue := $value | replaceRE `\{query\}` (urlquery $address) -}}
+        {{- $paramValue = $paramValue | replaceRE `\{apiKey\}` $apiKey -}}
+        {{- $queryParams = $queryParams | append (printf "%s=%s" $key $paramValue) -}}
+      {{- end -}}
+      
+      {{- if $queryParams -}}
+        {{- $url = printf "%s?%s" $baseUrl (delimit $queryParams "&") -}}
+      {{- else -}}
+        {{- /* Replace placeholders in URL directly */ -}}
+        {{- $url = $baseUrl | replaceRE `\{query\}` (urlquery $address) -}}
+        {{- $url = $url | replaceRE `\{apiKey\}` $apiKey -}}
+      {{- end -}}
+      
+      {{- $userAgent := $providerConfig.userAgent | default "hugo-maps/1.0" -}}
+      {{- $headers = dict "Accept" "application/json" "User-Agent" $userAgent -}}
+    {{- end -}}
+    
+    {{- if $url -}}
+      {{- /* Make the HTTP request with caching using try */ -}}
+      {{- $opts := dict "headers" $headers -}}
+      {{- $fetchResult := try (resources.GetRemote $url $opts) -}}
+      {{- if $fetchResult.Err -}}
+        {{- warnf "hugo-maps: Geocoding error for '%s' with %s: %s" $address $providerName $fetchResult.Err -}}
+      {{- else -}}
+        {{- with $fetchResult.Value -}}
+          {{- $parseResult := try (.Content | transform.Unmarshal) -}}
+          {{- if $parseResult.Err -}}
+            {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s" $address $parseResult.Err -}}
+          {{- else -}}
+            {{- $data := $parseResult.Value -}}
+          
+          {{- /* Parse response based on provider */ -}}
+          {{- if eq $providerName "photon" -}}
+            {{- with index $data.features 0 -}}
+              {{- $coords := .geometry.coordinates -}}
+              {{- $props := .properties | default dict -}}
+              {{- $placeParts := slice -}}
+              {{- with $props.name }}{{ $placeParts = $placeParts | append . }}{{ end -}}
+              {{- with $props.city }}{{ $placeParts = $placeParts | append . }}{{ end -}}
+              {{- with $props.state }}{{ $placeParts = $placeParts | append . }}{{ end -}}
+              {{- with $props.country }}{{ $placeParts = $placeParts | append . }}{{ end -}}
+              {{- $result = dict 
+                  "success" true 
+                  "lng" (index $coords 0) 
+                  "lat" (index $coords 1) 
+                  "placeName" (delimit $placeParts ", ")
+              -}}
+            {{- end -}}
+            
+          {{- else if eq $providerName "nominatim" -}}
+            {{- with index $data.features 0 -}}
+              {{- $coords := slice -}}
+              {{- if eq .geometry.type "Point" -}}
+                {{- $coords = .geometry.coordinates -}}
+              {{- else if .bbox -}}
+                {{- /* Calculate center from bounding box */ -}}
+                {{- $lng := div (add (index .bbox 0) (index .bbox 2)) 2.0 -}}
+                {{- $lat := div (add (index .bbox 1) (index .bbox 3)) 2.0 -}}
+                {{- $coords = slice $lng $lat -}}
+              {{- end -}}
+              {{- if $coords -}}
+                {{- $result = dict 
+                    "success" true 
+                    "lng" (index $coords 0) 
+                    "lat" (index $coords 1) 
+                    "placeName" (.properties.display_name | default "")
+                -}}
+              {{- end -}}
+            {{- end -}}
+            
+          {{- else -}}
+            {{- /* Template geocoder response parsing */ -}}
+            {{- $results := $data -}}
+            {{- with $providerConfig.resultsPath -}}
+              {{- range split . "." -}}
+                {{- $results = index $results . -}}
+              {{- end -}}
+            {{- else -}}
+              {{- with $data.features -}}
+                {{- $results = . -}}
+              {{- end -}}
+            {{- end -}}
+            
+            {{- with index $results 0 -}}
+              {{- $item := . -}}
+              {{- $lng := 0.0 -}}
+              {{- $lat := 0.0 -}}
+              {{- $placeName := "" -}}
+              
+              {{- /* Try to extract coordinates */ -}}
+              {{- if and .geometry .geometry.coordinates -}}
+                {{- $lng = index .geometry.coordinates 0 -}}
+                {{- $lat = index .geometry.coordinates 1 -}}
+              {{- else if and (isset . "lon") (isset . "lat") -}}
+                {{- $lng = .lon | float -}}
+                {{- $lat = .lat | float -}}
+              {{- else if and (isset . "lng") (isset . "lat") -}}
+                {{- $lng = .lng | float -}}
+                {{- $lat = .lat | float -}}
+              {{- else if $providerConfig.latPath -}}
+                {{- $latVal := $item -}}
+                {{- range split $providerConfig.latPath "." -}}
+                  {{- $latVal = index $latVal . -}}
+                {{- end -}}
+                {{- $lonVal := $item -}}
+                {{- range split $providerConfig.lonPath "." -}}
+                  {{- $lonVal = index $lonVal . -}}
+                {{- end -}}
+                {{- $lng = $lonVal | float -}}
+                {{- $lat = $latVal | float -}}
+              {{- end -}}
+              
+              {{- /* Extract place name */ -}}
+              {{- if $providerConfig.namePath -}}
+                {{- $nameVal := $item -}}
+                {{- range split $providerConfig.namePath "." -}}
+                  {{- $nameVal = index $nameVal . -}}
+                {{- end -}}
+                {{- $placeName = $nameVal | default "" -}}
+              {{- else -}}
+                {{- $placeName = .display_name | default .name | default .formatted_address | default "" -}}
+              {{- end -}}
+              
+              {{- if and $lng $lat -}}
+                {{- $result = dict "success" true "lng" $lng "lat" $lat "placeName" $placeName -}}
+              {{- end -}}
+            {{- end -}}
+          {{- end -}}
+          {{- end -}}{{- /* end if not parseResult.Err */ -}}
+        {{- end -}}{{- /* end with fetchResult.Value */ -}}
+      {{- end -}}{{- /* end if not fetchResult.Err */ -}}
+    {{- end -}}{{- /* end if $url */ -}}
+  {{- end -}}{{- /* end if not $result.success */ -}}
+{{- end -}}{{- /* end range $geocoderList */ -}}
+{{- end -}}{{- /* end if $address */ -}}
+
+{{ return $result }}

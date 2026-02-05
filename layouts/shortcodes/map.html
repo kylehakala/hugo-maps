@@ -13,6 +13,7 @@
     {{- $defaultparams := index $hugoMapsConfig "default" | default dict -}}
     {{- $mapparams = merge $baseparams $defaultparams $mapparams -}}
     {{- $addressZoom := .Get "address-zoom" | default .Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
+    {{- $geocodeAtBuild := $mapparams.geocodeAtBuild | default true -}}
     
     {{- /* Content Map mode - aggregate pages with addresses */ -}}
     {{- $contentMapConfig := $mapparams.contentMap | default dict -}}
@@ -66,6 +67,13 @@
               "address" $addr
               "description" (.Params.description | default "")
           -}}
+          {{- /* Pre-geocode at build time if enabled */ -}}
+          {{- if $geocodeAtBuild -}}
+            {{- $geocodeResult := partial "hugo-maps/geocode.html" (dict "address" $addr "config" $mapparams) -}}
+            {{- if $geocodeResult.success -}}
+              {{- $loc = merge $loc (dict "coordinates" (slice $geocodeResult.lng $geocodeResult.lat) "geocoded" true) -}}
+            {{- end -}}
+          {{- end -}}
           {{- $locations = $locations | append $loc -}}
         {{- end -}}
       {{- end -}}
@@ -94,6 +102,17 @@
     {{- /* Allow shortcode override */ -}}
     {{- $mapAddress = .Get "address" | default $mapAddress -}}
     {{- $addressZoom := .Get "address-zoom" | default $.Page.Params.addressZoom | default ($mapparams.addressZoom | default "") -}}
+    
+    {{- /* Pre-geocode single address at build time if enabled */ -}}
+    {{- $preGeocodedCoords := slice -}}
+    {{- $preGeocodedPlaceName := "" -}}
+    {{- if and $mapAddress $geocodeAtBuild -}}
+      {{- $geocodeResult := partial "hugo-maps/geocode.html" (dict "address" $mapAddress "config" $mapparams) -}}
+      {{- if $geocodeResult.success -}}
+        {{- $preGeocodedCoords = slice $geocodeResult.lng $geocodeResult.lat -}}
+        {{- $preGeocodedPlaceName = $geocodeResult.placeName -}}
+      {{- end -}}
+    {{- end -}}
 
     {{- $mapstyle := dict -}}
 
@@ -584,16 +603,26 @@
             for (var i = 0; i < locations.length; i++) {
               var loc = locations[i];
               try {
-                var result = await window.hugoMapsHelpers.geocoderApi.forwardGeocode({
-                  query: loc.address,
-                  providers: providers,
-                  config: geocoderConfig
-                });
+                var coords = null;
                 
-                if (result.features && result.features.length > 0) {
-                  var coords = result.features[0].center;
+                // Use pre-geocoded coordinates if available (build-time geocoding)
+                if (loc.geocoded && loc.coordinates && Array.isArray(loc.coordinates)) {
+                  coords = loc.coordinates;
+                  console.log('Using pre-geocoded coordinates for:', loc.title);
+                } else {
+                  // Fall back to client-side geocoding
+                  var result = await window.hugoMapsHelpers.geocoderApi.forwardGeocode({
+                    query: loc.address,
+                    providers: providers,
+                    config: geocoderConfig
+                  });
                   
-                  if (coords && Array.isArray(coords) && coords.length === 2) {
+                  if (result.features && result.features.length > 0) {
+                    coords = result.features[0].center;
+                  }
+                }
+                
+                if (coords && Array.isArray(coords) && coords.length === 2) {
                     var popupContent = loc.description 
                       ? '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong><br>' + loc.description
                       : '<strong><a href="' + loc.link + '">' + loc.title + '</a></strong>';
@@ -620,7 +649,6 @@
                     
                     bounds.extend(coords);
                     markersAdded++;
-                  }
                 }
               } catch (err) {
                 console.error('Geocode error for ' + loc.address + ':', err);
@@ -644,6 +672,71 @@
           {{- /* Single marker mode */ -}}
           {{- if $mapAddress }}
           {{- $geocodersValue := $mapparams.geocoders | default "nominatim" -}}
+          
+          {{- /* Check if we have pre-geocoded coordinates from build time */ -}}
+          {{- if $preGeocodedCoords }}
+          // Using pre-geocoded coordinates (build-time geocoding)
+          (function() {
+            var preGeocodedCenter = {{ $preGeocodedCoords | jsonify }};
+            {{- if $addressZoom }}
+            var addressZoom = {{ $addressZoom }};
+            {{- else }}
+            var addressZoom = {{ $mapparams.zoom | default 11 }};
+            {{- end }}
+            
+            function showPreGeocodedMarker() {
+              map.flyTo({
+                center: preGeocodedCenter,
+                zoom: addressZoom,
+                duration: {{ $mapparams.flyToDuration | default 2500 }},
+                bearing: {{ $mapparams.bearing | default 0 }},
+                pitch: {{ $mapparams.pitch | default 0 }}
+              });
+              
+              var addressMarker = new maplibregl.Marker({ color: '{{ $mapparams.markerColor | default "#114477" }}' })
+                .setLngLat(preGeocodedCenter);
+              
+              {{- if eq ($mapparams.popupTrigger | default "hover") "click" }}
+              addressMarker
+                .setPopup(
+                  new maplibregl.Popup()
+                    .setHTML("<strong>{{ .Page.Title }}</strong>")
+                )
+                .addTo(map)
+                .togglePopup();
+              {{- else }}
+              addressMarker.addTo(map);
+              
+              var addressPopup = new maplibregl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                offset: 25
+              });
+              
+              var addressMarkerEl = addressMarker.getElement();
+              addressMarkerEl.style.cursor = 'pointer';
+              
+              addressMarkerEl.addEventListener('mouseenter', function() {
+                addressPopup
+                  .setLngLat(preGeocodedCenter)
+                  .setHTML("<strong>{{ .Page.Title }}</strong>")
+                  .addTo(map);
+              });
+              
+              addressMarkerEl.addEventListener('mouseleave', function() {
+                addressPopup.remove();
+              });
+              {{- end }}
+            }
+            
+            if (map.isStyleLoaded()) {
+              showPreGeocodedMarker();
+            } else {
+              map.on('load', showPreGeocodedMarker);
+            }
+          })();
+          {{- else }}
+          // Fall back to client-side geocoding
           const handleGeocode = function() {
             {{- if reflect.IsSlice $geocodersValue }}
             const providers = {{ $geocodersValue | jsonify }};
@@ -719,6 +812,7 @@
           } else {
             map.on('load', handleGeocode);
           }
+          {{- end }}{{- /* end if preGeocodedCoords */ -}}
           {{- end }}
 
           {{- range $mapparams.markers }}

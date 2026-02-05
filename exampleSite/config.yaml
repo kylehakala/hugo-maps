@@ -42,6 +42,13 @@ params:
       center: [2.3522, 48.8566]  # Paris
       zoom: 13
 
+    # Example 4: Address geocoding (uses frontmatter address, pre-rendered at build time)
+    address_map:
+      style: osm-bright
+      center: [-122.4194, 47.6062]  # Seattle (fallback)
+      zoom: 15
+      geocodeAtBuild: true  # Pre-render geocoding at build time
+
 module:
   imports:
     - path: "github.com/kylehakala/hugo-maps"

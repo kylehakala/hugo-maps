@@ -147,6 +147,32 @@ Parameters are merged in this order (later values override earlier):
 
 Hugo Maps can automatically geocode addresses to coordinates, displaying a marker at the location with a fly-to animation.
 
+### Build-Time vs Client-Side Geocoding
+
+By default, Hugo Maps performs geocoding **at build time**, which means:
+
+- ⚡ **Faster page loads** - No client-side API calls needed
+- 🔒 **Better privacy** - Users' browsers don't contact geocoding services
+- 💰 **Lower API costs** - Addresses are geocoded once, not on every page view
+- 📦 **Cached results** - Hugo caches geocoding results for faster rebuilds
+
+```yaml
+# In config.yaml (default behavior)
+params:
+  hugo-maps:
+    my_map:
+      geocodeAtBuild: true  # This is the default
+```
+
+To disable build-time geocoding and use client-side geocoding instead:
+
+```yaml
+params:
+  hugo-maps:
+    my_map:
+      geocodeAtBuild: false  # Fall back to client-side geocoding
+```
+
 ### Basic Usage
 
 1. Add an address to your page frontmatter:
@@ -164,6 +190,7 @@ address: "Empire State Building, New York, NY"
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `geocodeAtBuild` | boolean | `true` | Pre-render geocoding at Hugo build time |
 | `geocodeParams` | string/array | `"address"` | Frontmatter field(s) to use for geocoding |
 | `geocoders` | string | `"photon,nominatim"` | Geocoder provider(s) to use |
 | `geocoderConfig` | object | `{}` | Provider-specific configuration |
