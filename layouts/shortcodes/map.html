@@ -233,8 +233,6 @@
                   const searchQuery = encodeURIComponent(query);
                   const request = `${baseUrl}/search?q=${searchQuery}&format=geojson&polygon_geojson=1&addressdetails=1`;
                   
-                  console.log('Nominatim request:', request);
-                  
                   const response = await fetch(request, {
                     headers: {
                       'User-Agent': userAgent,
@@ -293,7 +291,6 @@
                     });
                   }
                   
-                  console.log('Nominatim returned ' + features.length + ' features');
                   return features;
                 }
               },
@@ -306,8 +303,6 @@
                   const baseUrl = providerConfig.url || 'https://photon.komoot.io';
                   const searchQuery = encodeURIComponent(query);
                   const request = `${baseUrl}/api/?q=${searchQuery}&limit=5`;
-                  
-                  console.log('Photon request:', request);
                   
                   const response = await fetch(request, {
                     headers: { 'Accept': 'application/json' }
@@ -338,7 +333,6 @@
                     };
                   });
                   
-                  console.log('Photon returned ' + features.length + ' features');
                   return features;
                 }
               }
@@ -375,8 +369,6 @@
               if (paramString) {
                 url += (url.includes('?') ? '&' : '?') + paramString;
               }
-              
-              console.log(`Template geocoder [${providerName}] request:`, url);
               
               // Build headers - Note: User-Agent is NOT included for browser requests
               // because most APIs block it via CORS. Use build-time geocoding for APIs
@@ -490,7 +482,6 @@
                 });
               }
               
-              console.log(`Template geocoder parsed ${features.length} features`);
               return features;
             },
             
@@ -505,23 +496,18 @@
                 : ['photon', 'nominatim'];
               const geocoderConfig = config.config || {};
               
-              console.log('forwardGeocode called with providers:', providerList);
-              
               for (const providerName of providerList) {
                 try {
                   // Check for built-in provider first
                   const provider = this.providers[providerName];
                   if (provider) {
-                    console.log(`Trying built-in provider: ${providerName}`);
                     const results = await provider.forwardGeocode(config.query, geocoderConfig, this.defaults);
                     
                     if (results && results.length > 0) {
-                      console.log('Geocoding succeeded with ' + providerName);
                       return { features: results };
                     }
                   } else if (geocoderConfig[providerName] && geocoderConfig[providerName].url) {
                     // Use template geocoder for custom providers defined in config
-                    console.log(`Trying template provider: ${providerName}`);
                     const results = await this.templateGeocode(
                       providerName, 
                       config.query, 
@@ -530,7 +516,6 @@
                     );
                     
                     if (results && results.length > 0) {
-                      console.log('Geocoding succeeded with template provider: ' + providerName);
                       return { features: results };
                     }
                   } else {
@@ -612,7 +597,6 @@
                 // Use pre-geocoded coordinates if available (build-time geocoding)
                 if (loc.geocoded && loc.coordinates && Array.isArray(loc.coordinates)) {
                   coords = loc.coordinates;
-                  console.log('Using pre-geocoded coordinates for:', loc.title);
                 } else {
                   // Fall back to client-side geocoding
                   var result = await window.hugoMapsHelpers.geocoderApi.forwardGeocode({
