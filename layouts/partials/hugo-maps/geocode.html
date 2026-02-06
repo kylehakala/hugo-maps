@@ -86,12 +86,13 @@
         {{- warnf "hugo-maps: Geocoding error for '%s' with %s: %s" $address $providerName $fetchResult.Err -}}
       {{- else -}}
         {{- with $fetchResult.Value -}}
-          {{- /* Parse JSON response - get content and parse it */ -}}
+          {{- /* Parse JSON response */ -}}
           {{- $data := dict -}}
           {{- $parseError := false -}}
           {{- $content := .Content | strings.TrimSpace -}}
-          {{- /* Try to parse as JSON by piping to transform.Unmarshal */ -}}
-          {{- $parseResult := try ($content | transform.Unmarshal) -}}
+          {{- /* Create a temporary JSON resource to ensure Hugo parses it as JSON */ -}}
+          {{- $jsonResource := resources.FromString "geocode-temp.json" $content -}}
+          {{- $parseResult := try $jsonResource.Content | transform.Unmarshal -}}
           {{- if $parseResult.Err -}}
             {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s (first 100 chars: %s)" $address $parseResult.Err ($content | truncate 100) -}}
             {{- $parseError = true -}}
