@@ -213,7 +213,7 @@
               {{- if and $lng $lat -}}
                 {{- $result = dict "success" true "lng" $lng "lat" $lat "placeName" $placeName -}}
               {{- else -}}
-                {{- warnf "hugo-maps: Template geocoder '%s' found result but failed to extract coords for '%s'. Item keys: %v, has lon=%v lat=%v" $providerName $address (keys $item) (isset $item "lon") (isset $item "lat") -}}
+                {{- warnf "hugo-maps: Template geocoder '%s' found result but failed to extract coords for '%s'. lng=%v lat=%v, has lon field=%v" $providerName $address $lng $lat (isset $item "lon") -}}
               {{- end -}}
             {{- end -}}
           {{- end -}}
