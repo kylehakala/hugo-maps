@@ -1,4 +1,4 @@
-style: osm-bright # theme to use
+style: osm-bright # Map style: can be a local name (e.g., "osm-bright") or a full URL (e.g., "https://example.com/style.json")
 type: remote # type of map, either remote or local
 tilesMinZoom: # minimum zoom level for local maps
 tilesMaxZoom: # maximum zoom level for local maps

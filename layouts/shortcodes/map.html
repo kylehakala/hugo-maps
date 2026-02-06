@@ -115,11 +115,25 @@
     {{- end -}}
 
     {{- $mapstyle := dict -}}
+    {{- $styleValue := $mapparams.style | default "osm-bright" -}}
+    {{- $isRemoteStyle := or (hasPrefix $styleValue "http://") (hasPrefix $styleValue "https://") -}}
 
     {{- if eq ($mapparams.type | default "remote") "remote" -}}
       {{- $sources := dict "sources" ($mapparams.sources | default dict) -}}
-      {{- $mapstyle = resources.Get (printf "map-styles/%s.json" ($mapparams.style | default "osm-bright")) | unmarshal -}}
-      {{- $mapstyle = merge $mapstyle $sources -}}
+      {{- if $isRemoteStyle -}}
+        {{- /* Style is a URL - fetch it remotely */ -}}
+        {{- $styleResource := resources.GetRemote $styleValue -}}
+        {{- if $styleResource -}}
+          {{- $mapstyle = $styleResource | transform.Unmarshal -}}
+          {{- $mapstyle = merge $mapstyle $sources -}}
+        {{- else -}}
+          {{- warnf "hugo-maps: Failed to fetch remote style from '%s'" $styleValue -}}
+        {{- end -}}
+      {{- else -}}
+        {{- /* Style is a local name - load from assets */ -}}
+        {{- $mapstyle = resources.Get (printf "map-styles/%s.json" $styleValue) | unmarshal -}}
+        {{- $mapstyle = merge $mapstyle $sources -}}
+      {{- end -}}
     {{- end -}}
 
     <script src='https://cdn.jsdelivr.net/npm/maplibre-gl@5.17.0/dist/maplibre-gl.js'></script>
