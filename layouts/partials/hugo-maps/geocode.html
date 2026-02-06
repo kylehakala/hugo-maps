@@ -165,6 +165,11 @@
               {{- end -}}
             {{- end -}}
             
+            {{- /* Debug: log results count */ -}}
+            {{- if eq (len $results) 0 -}}
+              {{- warnf "hugo-maps: Template geocoder '%s' returned 0 results for '%s'. Data type: %T" $providerName $address $data -}}
+            {{- end -}}
+            
             {{- with index $results 0 -}}
               {{- $item := . -}}
               {{- $lng := 0.0 -}}
@@ -207,6 +212,8 @@
               
               {{- if and $lng $lat -}}
                 {{- $result = dict "success" true "lng" $lng "lat" $lat "placeName" $placeName -}}
+              {{- else -}}
+                {{- warnf "hugo-maps: Template geocoder '%s' found result but failed to extract coords for '%s'. Item keys: %v, has lon=%v lat=%v" $providerName $address (keys $item) (isset $item "lon") (isset $item "lat") -}}
               {{- end -}}
             {{- end -}}
           {{- end -}}
