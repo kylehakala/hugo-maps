@@ -90,8 +90,8 @@
           {{- $data := dict -}}
           {{- $parseError := false -}}
           {{- $content := .Content | strings.TrimSpace -}}
-          {{- /* Create a unique JSON resource per address to avoid caching issues */ -}}
-          {{- $resourceName := printf "geocode/%s.json" ($address | urlize) -}}
+          {{- /* Create a unique JSON resource per provider+address to avoid caching issues */ -}}
+          {{- $resourceName := printf "geocode/%s/%s.json" $providerName ($address | urlize) -}}
           {{- $jsonResource := resources.FromString $resourceName $content -}}
           {{- $parseResult := try ($jsonResource | transform.Unmarshal) -}}
           {{- if $parseResult.Err -}}
