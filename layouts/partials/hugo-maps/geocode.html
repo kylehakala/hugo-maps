@@ -92,7 +92,7 @@
           {{- $content := .Content | strings.TrimSpace -}}
           {{- /* Create a temporary JSON resource to ensure Hugo parses it as JSON */ -}}
           {{- $jsonResource := resources.FromString "geocode-temp.json" $content -}}
-          {{- $parseResult := try $jsonResource.Content | transform.Unmarshal -}}
+          {{- $parseResult := try ($jsonResource | transform.Unmarshal) -}}
           {{- if $parseResult.Err -}}
             {{- warnf "hugo-maps: Failed to parse geocoding response for '%s': %s (first 100 chars: %s)" $address $parseResult.Err ($content | truncate 100) -}}
             {{- $parseError = true -}}
